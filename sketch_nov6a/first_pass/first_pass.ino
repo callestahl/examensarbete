@@ -1,65 +1,49 @@
-#include <hardware/adc.h>
-#include <hardware/gpio.h>
-#include <math.h>
-#include <pico/stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
+#include "MCP_DAC.h"
 
-#include "MCP4822.h"
-#include "pinDefinitions.h"
+#define PIN_DAC_CS 5
+#define PITCH_INPUT 34
 
 #define WAVETABLE_SIZE 256
 #define SAMPLE_RATE 44100
 #define MAX_12BIT_VALUE 4095
 #define MAX_16BIT_VALUE 65535
 
-uint16_t sine_wave[WAVETABLE_SIZE];
-bool led_state = false;
+SPIClass spi = SPIClass(VSPI);
+MCP4822 dac(&spi);
 
-MCP4822 mcp;
+uint16_t dac_value = 0;
+
+void generate_sine_wave();
+void wavetable_oscillation(uint16_t* wavetable);
+
+uint16_t sine_wave[WAVETABLE_SIZE];
 
 static uint64_t phase = 0;
 uint64_t phase_increment;
 uint64_t sample_period_us = 1000000 / SAMPLE_RATE;
 uint64_t next_sample_time;
 
-void setup();
-void loop();
-void generate_sine_wave();
-void wavetable_oscillation(uint16_t* wavetable);
-
 void setup() {
-  stdio_init_all();
+  Serial.begin(9600);
 
-  gpio_init(ONBOARD_LED);
-  gpio_set_dir(ONBOARD_LED, true);
-  gpio_put(ONBOARD_LED, led_state);
-
+  pinMode(2, OUTPUT);
+  pinMode(PITCH_INPUT, INPUT);
+  digitalWrite(2, HIGH);
+  
   generate_sine_wave();
 
-  spi_inst_t* spi = spi0;
-  spi_init(spi, 1000000);
-  gpio_set_function(SCK, GPIO_FUNC_SPI);
-  gpio_set_function(TX, GPIO_FUNC_SPI);
-  MCP4822_init(&mcp, spi, CS);
+  spi.begin();
+  dac.begin(PIN_DAC_CS);
 
-  adc_init();
-  adc_gpio_init(26);
-  adc_select_input(0);
+  next_sample_time = micros();
 
-  next_sample_time = time_us_64();
+  
 }
+
+uint16_t val = 0;
 
 void loop() {
-  while (true) {
-    wavetable_oscillation(sine_wave);
-    // MCP4822_setOutput(&mcp, 0, MAX_12BIT_VALUE);
-  }
-}
-
-int main() {
-  setup();
-  loop();
+  wavetable_oscillation(sine_wave);
 }
 
 void generate_sine_wave() {
@@ -69,12 +53,14 @@ void generate_sine_wave() {
   }
 }
 
-void wavetable_oscillation(uint16_t* wavetable) {
-  uint16_t adc_value = adc_read();
 
+void wavetable_oscillation(uint16_t* wavetable) {
+  uint16_t adc_value = analogRead(PITCH_INPUT);
+
+  //phase_increment = ((uint64_t)adc_value * WAVETABLE_SIZE << 32) / SAMPLE_RATE;
   phase_increment = ((uint64_t)adc_value * WAVETABLE_SIZE << 32) / SAMPLE_RATE;
 
-  uint64_t current_time = time_us_64();
+  uint64_t current_time = micros();
   if (current_time >= next_sample_time) {
     // Calculate the integer and fractional parts of the phase
     uint32_t phase_int = phase >> 32;
@@ -87,10 +73,10 @@ void wavetable_oscillation(uint16_t* wavetable) {
     uint16_t sample2 = wavetable[(phase_int + 1) % WAVETABLE_SIZE];
 
     // Perform linear interpolation
-    uint16_t value = sample1 + ((sample2 - sample1) * phase_fraction >> 16);
-
+    uint16_t value = sample1 + (((sample2 - sample1) * phase_fraction) >> 16);
     // Output the interpolated value to the DAC
-    MCP4822_setOutput(&mcp, 0, value >> 4);  // Scale 16-bit value to 12-bit DAC
+    //MCP4822_setOutput(&mcp, 0, value >> 4);  // Scale 16-bit value to 12-bit DAC
+    dac.write(value >> 4, 0);
 
     // Increment the phase
     phase += phase_increment;
