@@ -71,19 +71,24 @@ uint64_t last_debounce_time = 0;
 const uint64_t debounce_delay = 50;
 
 void setup() {
+#if 1
   pinMode(button_pin, INPUT);
 
   display.begin();
 
+  display.fillScreen(SSD1351_BLACK);
   display.setTextColor(SSD1351_WHITE);
   display.setTextSize(1);
+  display.print("Hello");
 
+
+#endif
   millis_to_next_draw = millis();
 
   Serial.begin(115200);
   SerialBT.begin("WaveTablePP");
 
-
+#if 0
   osci.table_length = 256;
   osci.table_count = 3;
   osci.tables = (WaveTable*)calloc(osci.table_count, sizeof(WaveTable));
@@ -95,6 +100,7 @@ void setup() {
   generate_square_wave(&osci.tables[2], osci.table_length);
 
   redraw_screen();
+#endif
 
 
   //xTaskCreatePinnedToCore(draw_text, "Draws texts", 1024, NULL, 1, NULL, 0);
@@ -102,8 +108,11 @@ void setup() {
 
 void loop() {
   if (SerialBT.available()) {
-    bluetooth_buffer[bluetooth_buffer_size++] = SerialBT.read();
-    bluetooth_buffer[bluetooth_buffer_size] = '\0';
+    char c = SerialBT.read();
+    if(bluetooth_buffer_size < 1024) {
+      bluetooth_buffer[bluetooth_buffer_size++] = c;
+      bluetooth_buffer[bluetooth_buffer_size] = '\0';
+    }
     reading_bluetooth_values = true;
   } else if (reading_bluetooth_values) {
     clear_screen(10, 10);
@@ -115,6 +124,7 @@ void loop() {
     reading_bluetooth_values = false;
   }
 
+#if 0
   const int32_t button_state = digitalRead(button_pin);
   if (button_state == HIGH) {
     if (!button_pressed && ((millis() - last_debounce_time) > debounce_delay)) {
@@ -130,6 +140,7 @@ void loop() {
       last_debounce_time = millis();
     }
   }
+#endif
 }
 
 void redraw_screen() {
