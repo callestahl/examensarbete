@@ -8,6 +8,9 @@
 #define MAX_12BIT_VALUE 4095
 #define MAX_16BIT_VALUE 65535
 
+#define C0_FREQUENCY 16.35160f
+#define PITCH_INPUT_RANGE 10.0f 
+
 SPIClass spi = SPIClass(VSPI);
 MCP4822 dac(&spi);
 
@@ -15,6 +18,7 @@ uint16_t dac_value = 0;
 
 void generate_sine_wave();
 void wavetable_oscillation(uint16_t* wavetable);
+uint16_t analog_input_to_pitch(uint16_t analog_value);
 
 uint16_t sine_wave[WAVETABLE_SIZE];
 
@@ -56,9 +60,10 @@ void generate_sine_wave() {
 
 void wavetable_oscillation(uint16_t* wavetable) {
   uint16_t adc_value = analogRead(PITCH_INPUT);
+  uint16_t frequency = analog_input_to_pitch(adc_value);
 
   //phase_increment = ((uint64_t)adc_value * WAVETABLE_SIZE << 32) / SAMPLE_RATE;
-  phase_increment = ((uint64_t)adc_value * WAVETABLE_SIZE << 32) / SAMPLE_RATE;
+  phase_increment = ((uint64_t)frequency * WAVETABLE_SIZE << 32) / SAMPLE_RATE;
 
   uint64_t current_time = micros();
   if (current_time >= next_sample_time) {
@@ -76,6 +81,7 @@ void wavetable_oscillation(uint16_t* wavetable) {
     uint16_t value = sample1 + (((sample2 - sample1) * phase_fraction) >> 16);
     // Output the interpolated value to the DAC
     //MCP4822_setOutput(&mcp, 0, value >> 4);  // Scale 16-bit value to 12-bit DAC
+
     dac.write(value >> 4, 0);
 
     // Increment the phase
@@ -87,4 +93,10 @@ void wavetable_oscillation(uint16_t* wavetable) {
     // Update the next sample time
     next_sample_time += sample_period_us;
   }
+}
+
+uint16_t analog_input_to_pitch(uint16_t analog_value) {
+  float voltage = (float)analog_value / MAX_12BIT_VALUE * PITCH_INPUT_RANGE;
+  float frequency = C0_FREQUENCY * pow(2, voltage);
+  return frequency;
 }
