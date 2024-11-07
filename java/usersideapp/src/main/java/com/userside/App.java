@@ -37,8 +37,8 @@ public class App extends Application {
 
     private static Scene scene;
     private File currentFile;
-    private RemoteDevice esp32Device;  // Holds the ESP32 device to connect to later
-    private String connectionURL;      // Stores connection URL for the ESP32's Serial Port Service
+    private RemoteDevice esp32Device;  
+    private String connectionURL;     
 
     @Override
     public void start(Stage primaryStage) {
@@ -53,7 +53,7 @@ public class App extends Application {
         );
 
         Button sendButton = new Button("Send File");
-        sendButton.setDisable(true);  // Initially disable until a file is selected and device is found
+        sendButton.setDisable(true); 
         sendButton.setOnAction(event -> {
             if (currentFile != null && connectionURL != null) {
                 new Thread(this::transferFileToDevice).start();
@@ -62,6 +62,7 @@ public class App extends Application {
 
         VBox values = new VBox(dropLabel, sendButton);
         values.setAlignment(Pos.CENTER);
+        values.setSpacing(20);
         FlowPane pane = new FlowPane(values);
         pane.setAlignment(Pos.CENTER);
 
