@@ -67,7 +67,8 @@ public class App extends Application {
     @Override
     public void start(Stage primaryStage) {
         Label dropLabel = new Label("Drop File");
-        dropLabel.setStyle(
+        dropLabel.setStyle( 
+                "-fx-font-family: 'Arial'; " +
                 "-fx-font-size: 24; " +
                 "-fx-text-fill: rgb(160, 160, 160); " +
                 "-fx-border-color: white; " +
@@ -80,7 +81,7 @@ public class App extends Application {
         sendButton.setDisable(true); 
         sendButton.setOnAction(event -> {
             if (currentFile != null && connectionURL != null) {
-                new Thread(this::transferFileToDevice).start();
+                //new Thread(this::transferFileToDevice).start();
             }
         });
 
@@ -96,7 +97,7 @@ public class App extends Application {
         VBox root = new VBox(borderPane);
         root.setPadding(new Insets(150));
         root.setAlignment(Pos.CENTER);
-        root.setStyle("-fx-background-color: rgb(26, 26, 26);");
+        root.setStyle("-fx-font-family: 'Arial'; -fx-background-color: rgb(26, 26, 26);");
 
         root.setOnDragOver(event -> {
             if (event.getGestureSource() != root && event.getDragboard().hasFiles()) {
@@ -123,9 +124,9 @@ public class App extends Application {
         primaryStage.setTitle("Drag and Drop File");
         primaryStage.show();
 
-        Thread thread = new Thread(this::discoverBluetoothDevices);
-        thread.setDaemon(true);
-        thread.start();
+        //Thread thread = new Thread(this::discoverBluetoothDevices);
+        //thread.setDaemon(true);
+        //thread.start();
     }
 
     static void setRoot(String fxml) throws IOException {

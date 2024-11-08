@@ -40,6 +40,18 @@ public class WavFileProcessor {
 
                 
 
+                float[] shiftAvgDifference = new float[normalizedBuffer.length / 2];
+                for (int shift = 0; shift < shiftAvgDifference.length; shift++) {
+                    float total_difference = 0;
+                    for (int j = shift; j < normalizedBuffer.length - shift; j++) {
+                        total_difference += Math.abs(normalizedBuffer[j] - normalizedBuffer[j + shift]);
+                    }
+                    shiftAvgDifference[shift] = total_difference / (normalizedBuffer.length - shift);
+                }
+
+                
+                
+
 
 
                 audioInputStream.close();
