@@ -82,14 +82,6 @@
                         <id>default-cli</id>
                         <configuration>
                             <mainClass>com.userside.App</mainClass>
-                            <jvmArgs>
-                            <jvmArg>-Dprism.order=sw</jvmArg> 
-                            <jvmArg>-Djavafx.embed.singleThread=true</jvmArg> 
-                            <jvmArg>-Dprism.verbose=true</jvmArg> 
-                            <jvmArg>--add-opens</jvmArg>
-                            <jvmArg>java.base/java.lang=ALL-UNNAMED</jvmArg> 
-                            <jvmArg>-Dglass.accessible.force=false</jvmArg> 
-                        </jvmArgs>
                         </configuration>
                     </execution>
                 </executions>

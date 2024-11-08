@@ -1,6 +1,5 @@
 package com.userside;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -16,9 +15,6 @@ import javax.bluetooth.ServiceRecord;
 import javax.bluetooth.UUID;
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -27,6 +23,9 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.input.Dragboard;
@@ -84,6 +83,7 @@ public class App extends Application {
             }
         });
 
+
         VBox values = new VBox(dropLabel, sendButton);
         values.setAlignment(Pos.CENTER);
         values.setSpacing(20);
@@ -113,6 +113,14 @@ public class App extends Application {
                 success = true;
                 sendButton.setDisable(false);  
                 wavFileProcessor.readWaveFile(currentFile);
+                NumberAxis xAxis = new NumberAxis();
+                NumberAxis yAxis = new NumberAxis();
+                xAxis.setLabel("DD");
+                LineChart<Number,Number> lineChart = new LineChart<Number,Number>(xAxis,yAxis);
+                XYChart.Series series = new XYChart.Series();
+                for(int i = 0; i < wavFileProcessor.normalizedBuffer.length; ++i) {
+                    series.getData().add(new XYChart.Data<>(i, wavFileProcessor.normalizedBuffer[i]));
+                }
             }
             event.setDropCompleted(success);
             event.consume();
