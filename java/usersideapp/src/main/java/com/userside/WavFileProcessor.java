@@ -1,7 +1,10 @@
 package com.userside;
 
+import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
@@ -41,16 +44,27 @@ public class WavFileProcessor {
 
                 
 
-                shiftAvgDifference = new float[normalizedBuffer.length / 2];
-                for (int shift = 0; shift < shiftAvgDifference.length; shift++) {
+                
+                
+
+                int maxShift = (int)format.getSampleRate() / 20;
+                shiftAvgDifference = new float[maxShift];
+                for (int shift = 0; shift < maxShift; shift++) {
                     float total_difference = 0;
-                    for (int j = shift; j < normalizedBuffer.length - shift; j++) {
+                    for (int j = shift; j < maxShift - shift; j++) {
                         total_difference += Math.abs(normalizedBuffer[j] - normalizedBuffer[j + shift]);
                     }
                     shiftAvgDifference[shift] = total_difference / (normalizedBuffer.length - shift);
                 }
 
-                
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter("./output"))) {
+                    for (float value : shiftAvgDifference) {
+                        writer.write(Float.toString(value));
+                        writer.newLine();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 
 
 
