@@ -11,13 +11,35 @@
     </properties>
     <dependencies>
 
-		<dependency>
+        <dependency>
 			<groupId>net.sf.bluecove</groupId>
 			<artifactId>bluecove</artifactId>
 			<version>2.1.1-SNAPSHOT</version>
 			<scope>system</scope>
 			<systemPath>${basedir}/src/main/resources/bluecove-2.1.1-SNAPSHOT.jar</systemPath>
 		</dependency>
+		<dependency>
+			<groupId>net.sf.bluecove</groupId>
+			<artifactId>bluecove-bluez</artifactId>
+			<version>2.1.1-SNAPSHOT</version>
+			<scope>system</scope>
+			<systemPath>${basedir}/src/main/resources/bluecove-bluez-2.1.1-SNAPSHOT.jar</systemPath>
+		</dependency>
+		<dependency>
+			<groupId>net.sf.bluecove</groupId>
+			<artifactId>bluecove-emu</artifactId>
+			<version>2.1.1-SNAPSHOT</version>
+			<scope>system</scope>
+			<systemPath>${basedir}/src/main/resources/bluecove-emu-2.1.1-SNAPSHOT.jar</systemPath>
+		</dependency>
+		<dependency>
+			<groupId>net.sf.bluecove</groupId>
+			<artifactId>bluecove-gpl</artifactId>
+			<version>2.1.1-SNAPSHOT</version>
+			<scope>system</scope>
+			<systemPath>${basedir}/src/main/resources/bluecove-gpl-2.1.1-SNAPSHOT.jar</systemPath>
+		</dependency>
+
 
         <dependency>
             <groupId>org.openjfx</groupId>
