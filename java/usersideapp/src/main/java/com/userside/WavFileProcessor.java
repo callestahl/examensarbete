@@ -9,6 +9,7 @@ import javax.sound.sampled.AudioSystem;
 
 public class WavFileProcessor {
 
+    public float[] shiftAvgDifference;
 
     public void readWaveFile(File file) {
         int i = file.getName().lastIndexOf('.');
@@ -38,6 +39,18 @@ public class WavFileProcessor {
                     System.out.printf("Channel count: %d sound format not supported\n", channels);
                 }
 
+                
+
+                shiftAvgDifference = new float[normalizedBuffer.length / 2];
+                for (int shift = 0; shift < shiftAvgDifference.length; shift++) {
+                    float total_difference = 0;
+                    for (int j = shift; j < normalizedBuffer.length - shift; j++) {
+                        total_difference += Math.abs(normalizedBuffer[j] - normalizedBuffer[j + shift]);
+                    }
+                    shiftAvgDifference[shift] = total_difference / (normalizedBuffer.length - shift);
+                }
+
+                
                 
 
 

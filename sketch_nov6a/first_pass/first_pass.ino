@@ -1,7 +1,8 @@
 #include "MCP_DAC.h"
 
 #define PIN_DAC_CS 5
-#define PITCH_INPUT 34
+#define PIN_PITCH_INPUT 12
+#define PIN_WAVETABLE_POSITION 13 
 
 #define WAVETABLE_SIZE 256
 #define SAMPLE_RATE 44100
@@ -31,7 +32,8 @@ void setup() {
   Serial.begin(9600);
 
   pinMode(2, OUTPUT);
-  pinMode(PITCH_INPUT, INPUT);
+  pinMode(PIN_PITCH_INPUT, INPUT);
+  pinMode(PIN_WAVETABLE_POSITION, INPUT);
   digitalWrite(2, HIGH);
   
   generate_sine_wave();
@@ -40,14 +42,13 @@ void setup() {
   dac.begin(PIN_DAC_CS);
 
   next_sample_time = micros();
-
-  
 }
 
 uint16_t val = 0;
 
 void loop() {
   wavetable_oscillation(sine_wave);
+  Serial.println(analogRead(PIN_WAVETABLE_POSITION));
 }
 
 void generate_sine_wave() {
@@ -59,8 +60,9 @@ void generate_sine_wave() {
 
 
 void wavetable_oscillation(uint16_t* wavetable) {
-  uint16_t adc_value = analogRead(PITCH_INPUT);
+  uint16_t adc_value = analogRead(PIN_PITCH_INPUT);
   uint16_t frequency = analog_input_to_pitch(adc_value);
+  //Serial.println(frequency);
 
   //phase_increment = ((uint64_t)adc_value * WAVETABLE_SIZE << 32) / SAMPLE_RATE;
   phase_increment = ((uint64_t)frequency * WAVETABLE_SIZE << 32) / SAMPLE_RATE;
