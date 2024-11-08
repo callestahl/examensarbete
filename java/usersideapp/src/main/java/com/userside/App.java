@@ -112,7 +112,7 @@ public class App extends Application {
                 dropLabel.setText("File dropped: " + currentFile.getName() +" "+ currentFileExtension);
                 success = true;
                 sendButton.setDisable(false);  
-
+                wavFileProcessor.readWaveFile(currentFile);
             }
             event.setDropCompleted(success);
             event.consume();
