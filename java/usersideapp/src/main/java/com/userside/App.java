@@ -1,5 +1,6 @@
 package com.userside;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -15,7 +16,9 @@ import javax.bluetooth.ServiceRecord;
 import javax.bluetooth.UUID;
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
-
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -33,12 +36,33 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+/* https://ants.inf.um.es/~felixgm/docencia/j2me/javadoc/jsr82/javax/bluetooth/UUID.html
+ * SDP	                                0x0001	16-bit
+ * RFCOMM	                            0x0003	16-bit
+ * OBEX	                                0x0008	16-bit
+ * HTTP	                                0x000C	16-bit
+ * L2CAP	                            0x0100	16-bit
+ * BNEP	                                0x000F	16-bit
+ * Serial Port	                        0x1101	16-bit
+ * ServiceDiscoveryServerServiceClassID	0x1000	16-bit
+ * BrowseGroupDescriptorServiceClassID	0x1001	16-bit
+ * PublicBrowseGroup	                0x1002	16-bit
+ * OBEX Object Push Profile	            0x1105	16-bit
+ * OBEX File Transfer Profile	        0x1106	16-bit
+ * Personal Area Networking User	    0x1115	16-bit
+ * Network Access Point	                0x1116	16-bit
+ * Group Network	                    0x1117	16-bit
+ * 
+ */
+
 public class App extends Application {
 
     private static Scene scene;
     private File currentFile;
+    private String currentFileExtension;
     private RemoteDevice esp32Device;  
     private String connectionURL;     
+    private WavFileProcessor wavFileProcessor = new WavFileProcessor();
 
     @Override
     public void start(Stage primaryStage) {
@@ -85,9 +109,10 @@ public class App extends Application {
             boolean success = false;
             if (db.hasFiles()) {
                 currentFile = db.getFiles().get(0);
-                dropLabel.setText("File dropped: " + currentFile.getName());
+                dropLabel.setText("File dropped: " + currentFile.getName() +" "+ currentFileExtension);
                 success = true;
                 sendButton.setDisable(false);  
+
             }
             event.setDropCompleted(success);
             event.consume();
@@ -116,6 +141,7 @@ public class App extends Application {
         launch();
     }
 
+
     private void discoverBluetoothDevices() {
         try {
             LocalDevice localDevice = LocalDevice.getLocalDevice();
@@ -134,6 +160,7 @@ public class App extends Application {
                             esp32Device = btDevice;  
                             Platform.runLater(() -> System.out.println("ESP32 found. Discovering services..."));
 
+                            // NOTE(Linus): 0x1101 is the standard UUID for Serail port (SSP), so it looks to see if the device has a SPP service up.
                             agent.searchServices(null, new UUID[]{new UUID(0x1101)}, btDevice, this);
                         }
 
@@ -184,13 +211,22 @@ public class App extends Application {
             return;
         }
 
+        StreamConnection streamConnection = null;
         try {
-            // This function takes alot of time
-            StreamConnection streamConnection = (StreamConnection) Connector.open(connectionURL);
+            // NOTE(Linus): Can take a long time to open the connection
+            streamConnection = (StreamConnection) Connector.open(connectionURL);
             sendFile(streamConnection);
             System.out.println("File sent successfully.");
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            if(streamConnection != null) {
+                try {
+                    streamConnection.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 

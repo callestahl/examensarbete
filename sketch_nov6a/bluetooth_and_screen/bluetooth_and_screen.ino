@@ -54,7 +54,6 @@ int32_t bluetooth_buffer_size = 0;
 bool reading_bluetooth_values = false;
 
 uint64_t millis_to_next_draw;
-const char* texts[] = { "Hello", "This", "is", "ff" };
 
 uint64_t time_mi = 0;
 uint32_t text_index = 0;
@@ -79,7 +78,6 @@ void setup() {
   display.fillScreen(SSD1351_BLACK);
   display.setTextColor(SSD1351_WHITE);
   display.setTextSize(1);
-  display.print("Hello");
 
 
 #endif
@@ -87,8 +85,9 @@ void setup() {
 
   Serial.begin(115200);
   SerialBT.begin("WaveTablePP");
+  SerialBT.enableSSP();
 
-#if 0
+#if 1
   osci.table_length = 256;
   osci.table_count = 3;
   osci.tables = (WaveTable*)calloc(osci.table_count, sizeof(WaveTable));
@@ -107,24 +106,26 @@ void setup() {
 }
 
 void loop() {
-  if (SerialBT.available()) {
-    char c = SerialBT.read();
-    if(bluetooth_buffer_size < 1024) {
-      bluetooth_buffer[bluetooth_buffer_size++] = c;
-      bluetooth_buffer[bluetooth_buffer_size] = '\0';
+  if (SerialBT.hasClient()) {
+    if (SerialBT.available()) {
+      char c = SerialBT.read();
+      if (bluetooth_buffer_size < 1024) {
+        bluetooth_buffer[bluetooth_buffer_size++] = c;
+        bluetooth_buffer[bluetooth_buffer_size] = '\0';
+      }
+      reading_bluetooth_values = true;
+    } else if (reading_bluetooth_values) {
+      clear_screen(10, 10);
+      display.printf("%s\n", bluetooth_buffer);
+      for (int32_t i = 0; i < bluetooth_buffer_size; ++i) {
+        bluetooth_buffer[i] = '\0';
+      }
+      bluetooth_buffer_size = 0;
+      reading_bluetooth_values = false;
     }
-    reading_bluetooth_values = true;
-  } else if (reading_bluetooth_values) {
-    clear_screen(10, 10);
-    display.printf("%s\n", bluetooth_buffer);
-    for (int32_t i = 0; i < bluetooth_buffer_size; ++i) {
-      bluetooth_buffer[i] = '\0';
-    }
-    bluetooth_buffer_size = 0;
-    reading_bluetooth_values = false;
   }
 
-#if 0
+#if 1
   const int32_t button_state = digitalRead(button_pin);
   if (button_state == HIGH) {
     if (!button_pressed && ((millis() - last_debounce_time) > debounce_delay)) {
