@@ -5,6 +5,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
@@ -12,7 +14,9 @@ import javax.sound.sampled.AudioSystem;
 
 public class WavFileProcessor {
 
-    public float[] shiftAvgDifference;
+    public ArrayList<Float> shiftAvgDifference;
+    public float[] normalizedBuffer = null;
+    public int cycleSampleCount;
 
     public void readWaveFile(File file) {
         int i = file.getName().lastIndexOf('.');
@@ -33,7 +37,7 @@ public class WavFileProcessor {
                 int channels = format.getChannels();
                 int bitsPerSample = format.getSampleSizeInBits();
 
-                float[] normalizedBuffer = null;
+                normalizedBuffer = null;
                 if(channels == 2) {
                     normalizedBuffer = processStereoSoundBuffer(audioBuffer, bitsPerSample);
                 } else if (channels == 1) {
@@ -42,21 +46,60 @@ public class WavFileProcessor {
                     System.out.printf("Channel count: %d sound format not supported\n", channels);
                 }
 
-                
-
-                
-                
-
                 int maxShift = (int)format.getSampleRate() / 20;
-                shiftAvgDifference = new float[maxShift];
+                shiftAvgDifference = new ArrayList<>();
                 for (int shift = 0; shift < maxShift; shift++) {
                     float total_difference = 0;
                     for (int j = shift; j < maxShift - shift; j++) {
                         total_difference += Math.abs(normalizedBuffer[j] - normalizedBuffer[j + shift]);
                     }
-                    shiftAvgDifference[shift] = total_difference / (normalizedBuffer.length - shift);
+                    float avg = total_difference / (normalizedBuffer.length - shift);
+                    if(avg > 0.001f) {
+                        shiftAvgDifference.add(avg);
+                    }
                 }
 
+                float[] smooth = smoothArray(shiftAvgDifference, 5);
+
+                int scanCount = 50;
+                ArrayList<Integer> smallestIndex = new ArrayList<>();
+                boolean jump = false;
+                for(int j = 0; j < smooth.length; ++j) {
+                    for(int h = 1; h <= scanCount; ++h) {
+                        int rightIndex = j + h;
+                        int leftIndex = j - h;
+                        if(leftIndex >= 0) {
+                            if(smooth[leftIndex] < smooth[j]) {
+                                jump = true;                 
+                                break;
+                            }
+                        }
+                        if (rightIndex < smooth.length) {
+                            if(smooth[rightIndex] < smooth[j]) {
+                                jump = true;                 
+                                break;
+                            }
+                        }
+                    }
+                    if(!jump) {
+                        smallestIndex.add(j);
+                    }
+                    jump = false;
+                }
+
+                ArrayList<Integer> counts = new ArrayList<>();
+                for(int j = 1; j < smallestIndex.size(); ++j) {
+                    counts.add(smallestIndex.get(j) - smallestIndex.get(j - 1));
+                }
+
+                int sum = 0;
+                for(int count : counts) {
+                    sum += count;
+                }
+                cycleSampleCount = sum / counts.size();
+
+
+                /* 
                 try (BufferedWriter writer = new BufferedWriter(new FileWriter("./output"))) {
                     for (float value : shiftAvgDifference) {
                         writer.write(Float.toString(value));
@@ -65,6 +108,7 @@ public class WavFileProcessor {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+                    */
                 
 
 
@@ -75,6 +119,34 @@ public class WavFileProcessor {
                 e.printStackTrace();
             }
         }
+    }
+
+    private static float[] smoothArray(ArrayList<Float> array, int windowSize) {
+        float[] smoothed = new float[array.size()];
+        for (int i = 0; i < array.size(); i++) {
+            int start = Math.max(0, i - windowSize / 2);
+            int end = Math.min(array.size(), i + windowSize / 2 + 1);
+            float sum = 0;
+            for (int j = start; j < end; j++) {
+                sum += array.get(j);
+            }
+            smoothed[i] = sum / (end - start);
+        }
+        return smoothed;
+    }
+
+    // Method to find significant minima in the smoothed data
+    public static List<Integer> findSignificantMinima(float[] data, float threshold) {
+        List<Integer> minimaIndices = new ArrayList<>();
+        for (int i = 1; i < data.length - 1; i++) {
+            // Check if point is significantly lower than its neighbors by a threshold
+            if (data[i] < data[i - 1] && data[i] < data[i + 1] &&
+                Math.abs(data[i - 1] - data[i]) > threshold &&
+                Math.abs(data[i + 1] - data[i]) > threshold) {
+                minimaIndices.add(i);
+            }
+        }
+        return minimaIndices;
     }
 
     private float[] processMonoSoundBuffer(byte[] audioBuffer, int bitsPerSample) {

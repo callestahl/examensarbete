@@ -32,6 +32,7 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -115,17 +116,18 @@ public class App extends Application {
                 sendButton.setDisable(false);  
                 wavFileProcessor.readWaveFile(currentFile);
 
-                NumberAxis xAxis = new NumberAxis();
-                NumberAxis yAxis = new NumberAxis();
-                xAxis.setLabel("DD");
-                LineChart<Number,Number> lineChart = new LineChart<Number,Number>(xAxis,yAxis);
-                XYChart.Series<Number,Number> series = new XYChart.Series<>();
-                for(int i = 0; i < wavFileProcessor.shiftAvgDifference.length; ++i) {
-                    series.getData().add(new XYChart.Data<>(i, wavFileProcessor.shiftAvgDifference[i]));
-                }
-                values.getChildren().add(lineChart);
-                lineChart.getData().add(series);
-
+                /* 
+                HBox hBox = new HBox();
+                hBox.getChildren().add(getLineChart(wavFileProcessor.shiftAvgDifference, 0));
+                hBox.getChildren().add(getLineChart(wavFileProcessor.normalizedBuffer, 151));
+                hBox.getChildren().add(getLineChart(wavFileProcessor.normalizedBuffer, (151 * 2)));
+                hBox.getChildren().add(getLineChart(wavFileProcessor.normalizedBuffer, (151 * 3)));
+                hBox.getChildren().add(getLineChart(wavFileProcessor.normalizedBuffer, (151 * 4)));
+                hBox.getChildren().add(getLineChart(wavFileProcessor.normalizedBuffer, (151 * 5)));
+                hBox.getChildren().add(getLineChart(wavFileProcessor.normalizedBuffer, (151 * 6)));
+                hBox.getChildren().add(getLineChart(wavFileProcessor.normalizedBuffer, (151 * 7)));
+                values.getChildren().add(hBox);
+                */
             }
             event.setDropCompleted(success);
             event.consume();
@@ -136,10 +138,25 @@ public class App extends Application {
         primaryStage.setTitle("Drag and Drop File");
         primaryStage.show();
 
-        //Thread thread = new Thread(this::discoverBluetoothDevices);
-        //thread.setDaemon(true);
-        //thread.start();
+        Thread thread = new Thread(this::discoverBluetoothDevices);
+        thread.setDaemon(true);
+        thread.start();
     }
+
+    private LineChart<Number,Number> getLineChart(ArrayList<Float> values, int offset) {
+        NumberAxis xAxis = new NumberAxis();
+        NumberAxis yAxis = new NumberAxis();
+        xAxis.setLabel("DD");
+        LineChart<Number,Number> lineChart = new LineChart<Number,Number>(xAxis,yAxis);
+        XYChart.Series<Number,Number> series = new XYChart.Series<>();
+        for(int i = 0; i < 151*4; ++i) {
+            series.getData().add(new XYChart.Data<>(i, values.get(i + offset)));
+        }
+        lineChart.getData().add(series);
+        //lineChart.setPrefSize(20, 20);
+        return lineChart;
+    }
+
 
     static void setRoot(String fxml) throws IOException {
         scene.setRoot(loadFXML(fxml));
@@ -244,15 +261,12 @@ public class App extends Application {
     }
 
     private void sendFile(StreamConnection connection) {
-        try (OutputStream outStream = connection.openOutputStream();
-             FileInputStream fileInputStream = new FileInputStream(currentFile)) {
+        try (OutputStream outStream = connection.openOutputStream()) {
 
-            byte[] buffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = fileInputStream.read(buffer)) != -1) {
-                outStream.write(buffer, 0, bytesRead);
-                Thread.sleep(10);
-            }
+            int cyclesToSend = 4;
+            int bytesToSend = wavFileProcessor.cycleSampleCount * cyclesToSend;
+            outStream.write(wavFileProcessor.normalizedBuffer, 0, 1024);
+            Thread.sleep(10);
             outStream.flush();
             System.out.println("File sent.");
 
