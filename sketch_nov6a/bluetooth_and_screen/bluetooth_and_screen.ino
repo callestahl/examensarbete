@@ -122,52 +122,71 @@ bool header_read = false;
 int32_t table_index = 0;
 int32_t sample_index = 0;
 
+int32_t sample_viewer = 0;
+
+int32_t header_read_count = 0;
+
+bool test = false;
+
+uint64_t bluetooth_timer = 0;
+uint64_t bluetooth_time_to_reset = 0;
+const uint64_t bluetooth_time_before_reset = 100000;
+
+
 void loop() {
 #if 1
-  if (SerialBT.hasClient()) {
-    if (SerialBT.available()) {
-      if(!header_read) {
+  while (SerialBT.available()) {
+    if (!header_read) {
+      if (SerialBT.available() >= 2) {
         uint8_t high = SerialBT.read();
-        if(SerialBT.available()) {
-          uint8_t low = SerialBT.read();
-          uint16_t cycle_sample_count = ((uint16_t)high << 8) | ((uint16_t)low);
-          osci.table_length = cycle_sample_count;
-          osci.table_count = 0;
-          header_read = true;
-          table_index = 0;
-          sample_index = 0;
-        }
-      } else {
+        uint8_t low = SerialBT.read();
+        uint16_t cycle_sample_count = ((uint16_t)high << 8) | ((uint16_t)low);
+        osci.table_length = cycle_sample_count;
+        osci.table_count = 0;
+        header_read = true;
+        table_index = 0;
+        sample_index = 0;
+      }
+    } else {
+      if (SerialBT.available() >= 2) {
         uint8_t sample_high = SerialBT.read();
-        if(SerialBT.available()){
-          uint8_t sample_low = SerialBT.read();
-          uint16_t sample = ((uint16_t)sample_high << 8) | ((uint16_t)sample_low);
-          if(table_index < osci.table_capacity) {
-            if(sample_index == 0) {
-              if(osci.tables[table_index].data != NULL) {
-                free(osci.tables[table_index].data);
-                osci.tables[table_index].data = NULL;
-              }
-              osci.tables[table_index].data = (uint16_t*)calloc(osci.table_length, sizeof(uint16_t));
-              osci.table_count++;
+        uint8_t sample_low = SerialBT.read();
+        uint16_t sample = ((uint16_t)sample_high << 8) | ((uint16_t)sample_low);
+        if (table_index < osci.table_capacity) {
+          if (sample_index == 0) {
+            if (osci.tables[table_index].data != NULL) {
+              free(osci.tables[table_index].data);
             }
-            osci.tables[table_index].data[sample_index++] = sample;
-            if(sample_index == osci.table_length) {
-              sample_index = 0;
-              table_index++;
+            osci.tables[table_index].data = (uint16_t*)calloc(osci.table_length, sizeof(uint16_t));
+            if (osci.tables[table_index].data != NULL) {
+              osci.table_count++;
+            } else {
+              // NOTE(Linus): Logging
             }
           }
+          osci.tables[table_index].data[sample_index++] = sample;
+          if (sample_index == osci.table_length) {
+            sample_index = 0;
+            table_index++;
+
+            SerialBT.write(0x08);
+          }
         }
-        reading_bluetooth_values = true;
       }
-    } else if (reading_bluetooth_values) {
+      reading_bluetooth_values = true;
+    }
+    bluetooth_time_to_reset = micros() + bluetooth_time_before_reset;
+  }
+
+  if (reading_bluetooth_values) {
+    bluetooth_timer = micros();
+    if (bluetooth_timer >= bluetooth_time_to_reset) {
       reading_bluetooth_values = false;
       header_read = false;
       table_index = 0;
       sample_index = 0;
 
-
-      if(osci.table_count > 0) {
+      if (osci.table_count > 0) {
         display_wave_index = 0;
         redraw_screen();
       }
@@ -179,6 +198,7 @@ void loop() {
   const int32_t button_state0 = digitalRead(button_pin0);
   if (button_state0 == HIGH) {
     if (!button0.button_pressed && ((millis() - button0.last_debounce_time) > debounce_delay)) {
+      //display.println("Button0");
       display_wave_index = (display_wave_index + 1) % osci.table_count;
       redraw_screen();
 
@@ -195,8 +215,10 @@ void loop() {
   const int32_t button_state1 = digitalRead(button_pin1);
   if (button_state1 == HIGH) {
     if (!button1.button_pressed && ((millis() - button1.last_debounce_time) > debounce_delay)) {
-      selected_index = (selected_index + 1) % 3;
+      //display.println("Button1");
+      display_wave_index = (display_wave_index + (osci.table_count - 1)) % osci.table_count;
       redraw_screen();
+
       button1.button_pressed = true;
       button1.last_debounce_time = millis();
     }
@@ -211,11 +233,18 @@ void loop() {
 
 void redraw_screen() {
   display.fillScreen(SSD1351_BLACK);
+#if 1
+
   wave_table_draw(&osci.tables[display_wave_index], osci.table_length);
 
   const uint32_t third_size = SCREEN_WIDTH / 3;
-  display.fillRoundRect(third_size * selected_index, 20 + (SCREEN_HEIGHT / 2), third_size, 36, 5, SSD1351_GREEN);
+  //display.fillRoundRect(third_size * selected_index, 20 + (SCREEN_HEIGHT / 2), third_size, 36, 5, SSD1351_GREEN);
   display.setCursor(0, 40 + (SCREEN_HEIGHT / 2));
+  display.println(display_wave_index);
+#endif
+
+  //display.setCursor(0, 0);
+  //display.printf("Sample: %u\nIndex: %d\n", osci.tables[0].data[sample_viewer], sample_viewer);
 
   //display.printf("   %s\n\n", osci.tables[display_wave_index].name);
   //display.printf("   Table size: %u", osci.table_length);
@@ -241,17 +270,18 @@ void wave_table_oscilator_update_phase(WaveTableOscillator* oscilator) {
 }
 
 void wave_table_draw(const WaveTable* table, uint32_t table_length) {
-  const uint32_t x_step = (SCREEN_WIDTH / (table_length / 2));
-  const uint32_t half_window_height = SCREEN_HEIGHT / 2;
+  const uint32_t screen_width_with_fraction = SCREEN_WIDTH << 16;
+  const uint32_t x_step = (screen_width_with_fraction / (table_length / 2));
+  const uint32_t window_height_75_procent = (SCREEN_HEIGHT * 3) / 4;
 
   uint32_t x0 = 0;
-  uint32_t y0 = half_window_height - ((table->data[0] * half_window_height) / MAX_16BIT_VALUE);
+  uint32_t y0 = window_height_75_procent - ((table->data[0] * window_height_75_procent) / MAX_16BIT_VALUE);
 
   for (uint32_t i = 2; i < table_length; i += 2) {
     uint32_t x1 = x0 + x_step;
-    uint32_t y1 = half_window_height - ((table->data[i] * half_window_height) / MAX_16BIT_VALUE);
+    uint32_t y1 = window_height_75_procent - ((table->data[i] * window_height_75_procent) / MAX_16BIT_VALUE);
 
-    display.drawLine(x0, y0, x1, y1, SSD1351_RED);
+    display.drawLine(x0 >> 16, y0, x1 >> 16, y1, SSD1351_RED);
 
     x0 = x1;
     y0 = y1;

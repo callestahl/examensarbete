@@ -1,8 +1,8 @@
 package com.userside;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 
@@ -32,7 +32,6 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -261,26 +260,35 @@ public class App extends Application {
     }
 
     private void sendFile(StreamConnection connection) {
-        try (OutputStream outStream = connection.openOutputStream()) {
+    try (
+        OutputStream outStream = connection.openOutputStream();
+        InputStream inStream = connection.openInputStream()
+    ) {
+        wavFileProcessor.cycleSampleCount = 151;
+        byte cycleSampleCountLow = (byte) (wavFileProcessor.cycleSampleCount & 0xFF);
+        byte cycleSampleCountHigh = (byte) ((wavFileProcessor.cycleSampleCount >> 8) & 0xFF);
+        byte[] header = { cycleSampleCountHigh, cycleSampleCountLow };
+        
+        outStream.write(header, 0, 2);
+        
+        int cyclesToSend = Math.min(256, wavFileProcessor.normalizedBuffer.length / wavFileProcessor.cycleSampleCount);
+        int bytesPerCycle = wavFileProcessor.cycleSampleCount * 2;
+        for (int i = 0; i < cyclesToSend; i++) {
+            int offset = i * bytesPerCycle;
+            outStream.write(wavFileProcessor.convertedBuffer, offset, bytesPerCycle);
 
-            wavFileProcessor.cycleSampleCount = 151;
-            byte cycleSampleCountLow = (byte)(wavFileProcessor.cycleSampleCount & 0xFF);
-            byte cycleSampleCountHigh = (byte)((wavFileProcessor.cycleSampleCount >> 8) & 0xFF);
-            byte[] header = {cycleSampleCountHigh, cycleSampleCountLow};
-            outStream.write(header, 0, 2);
-            Thread.sleep(10);
-            outStream.flush();
-
-            int cyclesToSend = Math.min(256, wavFileProcessor.normalizedBuffer.length / wavFileProcessor.cycleSampleCount);
-            int bytesToSend = (wavFileProcessor.cycleSampleCount * cyclesToSend) * 2;
-            outStream.write(wavFileProcessor.convertedBuffer, 0, bytesToSend);
-            Thread.sleep(10);
-            outStream.flush();
-            
-            System.out.println("File sent.");
-
-        } catch (Exception e) {
-            e.printStackTrace();
+            int ack = -1;
+            while ((ack = inStream.read()) != 0x08) {
+                if (ack == -1) {
+                    throw new Exception("Connection closed or timeout waiting for acknowledgment");
+                }
+                Thread.sleep(10); 
+            }
         }
+        outStream.flush();
+        System.out.println("File sent");
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
     }
 }
