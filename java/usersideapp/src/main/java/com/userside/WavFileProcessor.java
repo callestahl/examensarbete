@@ -1,10 +1,7 @@
 package com.userside;
 
-import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,11 +13,12 @@ public class WavFileProcessor {
 
     public ArrayList<Float> shiftAvgDifference;
     public float[] normalizedBuffer = null;
+    public byte[] convertedBuffer = null;
     public int cycleSampleCount;
 
     public void readWaveFile(File file) {
-        int i = file.getName().lastIndexOf('.');
-        String currentFileExtension =  file.getName().substring(i + 1);
+        int index = file.getName().lastIndexOf('.');
+        String currentFileExtension =  file.getName().substring(index + 1);
         if(currentFileExtension.equalsIgnoreCase("wav")) {
             try {
                 AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(file);
@@ -98,20 +96,15 @@ public class WavFileProcessor {
                 }
                 cycleSampleCount = sum / counts.size();
 
+                convertedBuffer = new byte[normalizedBuffer.length * 2];
+                for (int i = 0; i < normalizedBuffer.length; i++) {
+                    int convertedValue = (int) ((normalizedBuffer[i] + 1.0f) * 32767.5f);
 
-                /* 
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter("./output"))) {
-                    for (float value : shiftAvgDifference) {
-                        writer.write(Float.toString(value));
-                        writer.newLine();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    byte lowerByte = (byte) (convertedValue & 0xFF);    
+                    byte higherByte = (byte) ((convertedValue >> 8) & 0xFF);
+                    convertedBuffer[2 * i] = higherByte;
+                    convertedBuffer[2 * i + 1] = lowerByte;
                 }
-                    */
-                
-
-
 
                 audioInputStream.close();
                 bufferStream.close();

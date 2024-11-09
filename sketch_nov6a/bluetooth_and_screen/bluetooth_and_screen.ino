@@ -32,8 +32,14 @@ struct WaveTableOscillator {
   uint64_t phase_increment;
 
   uint32_t table_length;
+  uint32_t table_capacity;
   uint32_t table_count;
   WaveTable* tables;
+};
+
+struct Button {
+  bool button_pressed;
+  uint64_t last_debounce_time;
 };
 
 uint16_t lerp(uint16_t a, uint16_t b, uint32_t fraction);
@@ -62,16 +68,20 @@ int16_t cursor_x = 0;
 int16_t cursor_y = 0;
 
 bool device_connected = false;
-
-const int32_t button_pin = 4;
-bool button_pressed = false;
 int32_t display_wave_index = 0;
-uint64_t last_debounce_time = 0;
+int32_t selected_index = 0;
+
+const int32_t button_pin0 = 4;
+const int32_t button_pin1 = 2;
 const uint64_t debounce_delay = 50;
+Button button0 = {};
+Button button1 = {};
+
 
 void setup() {
 #if 1
-  pinMode(button_pin, INPUT);
+  pinMode(button_pin0, INPUT);
+  pinMode(button_pin1, INPUT);
 
   display.begin();
 
@@ -83,14 +93,17 @@ void setup() {
 #endif
   millis_to_next_draw = millis();
 
+#if 1
   Serial.begin(115200);
   SerialBT.begin("WaveTablePP");
   SerialBT.enableSSP();
+#endif
 
-#if 1
-  osci.table_length = 256;
-  osci.table_count = 3;
-  osci.tables = (WaveTable*)calloc(osci.table_count, sizeof(WaveTable));
+
+  osci.table_capacity = 256;
+  osci.tables = (WaveTable*)calloc(osci.table_capacity, sizeof(WaveTable));
+
+#if 0
   osci.tables[0].data = (uint16_t*)calloc(osci.table_length, sizeof(uint16_t));
   osci.tables[1].data = (uint16_t*)calloc(osci.table_length, sizeof(uint16_t));
   osci.tables[2].data = (uint16_t*)calloc(osci.table_length, sizeof(uint16_t));
@@ -105,40 +118,92 @@ void setup() {
   //xTaskCreatePinnedToCore(draw_text, "Draws texts", 1024, NULL, 1, NULL, 0);
 }
 
+bool header_read = false;
+int32_t table_index = 0;
+int32_t sample_index = 0;
+
 void loop() {
+#if 1
   if (SerialBT.hasClient()) {
     if (SerialBT.available()) {
-      char c = SerialBT.read();
-      if (bluetooth_buffer_size < 1024) {
-        bluetooth_buffer[bluetooth_buffer_size++] = c;
-        bluetooth_buffer[bluetooth_buffer_size] = '\0';
+      if(!header_read) {
+        uint8_t high = SerialBT.read();
+        if(SerialBT.available()) {
+          uint8_t low = SerialBT.read();
+          uint16_t cycle_sample_count = ((uint16_t)high << 8) | ((uint16_t)low);
+          osci.table_length = cycle_sample_count;
+          osci.table_count = 0;
+          header_read = true;
+          table_index = 0;
+          sample_index = 0;
+        }
+      } else {
+        uint8_t sample_high = SerialBT.read();
+        if(SerialBT.available()){
+          uint8_t sample_low = SerialBT.read();
+          uint16_t sample = ((uint16_t)sample_high << 8) | ((uint16_t)sample_low);
+          if(table_index < osci.table_capacity) {
+            if(sample_index == 0) {
+              if(osci.tables[table_index].data != NULL) {
+                free(osci.tables[table_index].data);
+                osci.tables[table_index].data = NULL;
+              }
+              osci.tables[table_index].data = (uint16_t*)calloc(osci.table_length, sizeof(uint16_t));
+              osci.table_count++;
+            }
+            osci.tables[table_index].data[sample_index++] = sample;
+            if(sample_index == osci.table_length) {
+              sample_index = 0;
+              table_index++;
+            }
+          }
+        }
+        reading_bluetooth_values = true;
       }
-      reading_bluetooth_values = true;
     } else if (reading_bluetooth_values) {
-      clear_screen(10, 10);
-      display.printf("%s\n", bluetooth_buffer);
-      for (int32_t i = 0; i < bluetooth_buffer_size; ++i) {
-        bluetooth_buffer[i] = '\0';
-      }
-      bluetooth_buffer_size = 0;
       reading_bluetooth_values = false;
+      header_read = false;
+      table_index = 0;
+      sample_index = 0;
+
+
+      if(osci.table_count > 0) {
+        display_wave_index = 0;
+        redraw_screen();
+      }
     }
   }
+#endif
 
 #if 1
-  const int32_t button_state = digitalRead(button_pin);
-  if (button_state == HIGH) {
-    if (!button_pressed && ((millis() - last_debounce_time) > debounce_delay)) {
+  const int32_t button_state0 = digitalRead(button_pin0);
+  if (button_state0 == HIGH) {
+    if (!button0.button_pressed && ((millis() - button0.last_debounce_time) > debounce_delay)) {
       display_wave_index = (display_wave_index + 1) % osci.table_count;
       redraw_screen();
 
-      button_pressed = true;
-      last_debounce_time = millis();
+      button0.button_pressed = true;
+      button0.last_debounce_time = millis();
     }
   } else {
-    if (button_pressed && ((millis() - last_debounce_time) > debounce_delay)) {
-      button_pressed = false;
-      last_debounce_time = millis();
+    if (button0.button_pressed && ((millis() - button0.last_debounce_time) > debounce_delay)) {
+      button0.button_pressed = false;
+      button0.last_debounce_time = millis();
+    }
+  }
+
+  const int32_t button_state1 = digitalRead(button_pin1);
+  if (button_state1 == HIGH) {
+    if (!button1.button_pressed && ((millis() - button1.last_debounce_time) > debounce_delay)) {
+      selected_index = (selected_index + 1) % 3;
+      redraw_screen();
+      button1.button_pressed = true;
+      button1.last_debounce_time = millis();
+    }
+  } else {
+    if (button1.button_pressed && ((millis() - button1.last_debounce_time) > debounce_delay)) {
+      button1.button_pressed = false;
+      button1.last_debounce_time = millis();
     }
   }
 #endif
@@ -148,9 +213,12 @@ void redraw_screen() {
   display.fillScreen(SSD1351_BLACK);
   wave_table_draw(&osci.tables[display_wave_index], osci.table_length);
 
+  const uint32_t third_size = SCREEN_WIDTH / 3;
+  display.fillRoundRect(third_size * selected_index, 20 + (SCREEN_HEIGHT / 2), third_size, 36, 5, SSD1351_GREEN);
   display.setCursor(0, 40 + (SCREEN_HEIGHT / 2));
-  display.printf("   %s\n\n", osci.tables[display_wave_index].name);
-  display.printf("   Table size: %u", osci.table_length);
+
+  //display.printf("   %s\n\n", osci.tables[display_wave_index].name);
+  //display.printf("   Table size: %u", osci.table_length);
 }
 
 uint16_t lerp(uint16_t a, uint16_t b, uint32_t fraction) {
@@ -173,7 +241,6 @@ void wave_table_oscilator_update_phase(WaveTableOscillator* oscilator) {
 }
 
 void wave_table_draw(const WaveTable* table, uint32_t table_length) {
-  const uint32_t half_window_width = SCREEN_WIDTH / 2;
   const uint32_t x_step = (SCREEN_WIDTH / (table_length / 2));
   const uint32_t half_window_height = SCREEN_HEIGHT / 2;
 

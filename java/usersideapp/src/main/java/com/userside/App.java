@@ -81,7 +81,7 @@ public class App extends Application {
         sendButton.setDisable(true); 
         sendButton.setOnAction(event -> {
             if (currentFile != null && connectionURL != null) {
-                //new Thread(this::transferFileToDevice).start();
+                new Thread(this::transferFileToDevice).start();
             }
         });
 
@@ -111,7 +111,7 @@ public class App extends Application {
             boolean success = false;
             if (db.hasFiles()) {
                 currentFile = db.getFiles().get(0);
-                dropLabel.setText("File dropped: " + currentFile.getName() +" "+ currentFileExtension);
+                dropLabel.setText("File dropped: " + currentFile.getName());
                 success = true;
                 sendButton.setDisable(false);  
                 wavFileProcessor.readWaveFile(currentFile);
@@ -263,11 +263,20 @@ public class App extends Application {
     private void sendFile(StreamConnection connection) {
         try (OutputStream outStream = connection.openOutputStream()) {
 
-            int cyclesToSend = 4;
-            int bytesToSend = wavFileProcessor.cycleSampleCount * cyclesToSend;
-            outStream.write(wavFileProcessor.normalizedBuffer, 0, 1024);
+            wavFileProcessor.cycleSampleCount = 151;
+            byte cycleSampleCountLow = (byte)(wavFileProcessor.cycleSampleCount & 0xFF);
+            byte cycleSampleCountHigh = (byte)((wavFileProcessor.cycleSampleCount >> 8) & 0xFF);
+            byte[] header = {cycleSampleCountHigh, cycleSampleCountLow};
+            outStream.write(header, 0, 2);
             Thread.sleep(10);
             outStream.flush();
+
+            int cyclesToSend = Math.min(256, wavFileProcessor.normalizedBuffer.length / wavFileProcessor.cycleSampleCount);
+            int bytesToSend = (wavFileProcessor.cycleSampleCount * cyclesToSend) * 2;
+            outStream.write(wavFileProcessor.convertedBuffer, 0, bytesToSend);
+            Thread.sleep(10);
+            outStream.flush();
+            
             System.out.println("File sent.");
 
         } catch (Exception e) {
