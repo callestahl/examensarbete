@@ -190,9 +190,6 @@ void loop() {
 
       if (osci.table_count > 0) {
         display_wave_index = 0;
-        for(uint16_t data : osci.tables[0].data) {
-          Serial.println(data);
-        }
         redraw_screen();
       }
     }
