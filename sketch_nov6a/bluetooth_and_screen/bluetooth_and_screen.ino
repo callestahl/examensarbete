@@ -42,6 +42,8 @@ struct Button {
   uint64_t last_debounce_time;
 };
 
+
+
 uint16_t lerp(uint16_t a, uint16_t b, uint32_t fraction);
 uint16_t wave_table_oscilator_linear_interpolation(const WaveTable* table, uint32_t table_length, uint64_t phase);
 void wave_table_oscilator_update_phase(WaveTableOscillator* oscilator);
@@ -188,6 +190,9 @@ void loop() {
 
       if (osci.table_count > 0) {
         display_wave_index = 0;
+        for(uint16_t data : osci.tables[0].data) {
+          Serial.println(data);
+        }
         redraw_screen();
       }
     }
