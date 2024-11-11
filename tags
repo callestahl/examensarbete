@@ -83,9 +83,12 @@ SecondaryController	./java/usersideapp/src/main/java/com/userside/SecondaryContr
 TX	./src/pinDefinitions.h	/^#define TX /;"	d
 WAVETABLE_SIZE	./src/main.c	/^#define WAVETABLE_SIZE /;"	d	file:
 WAVE_TABLE_H	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^#define WAVE_TABLE_H$/;"	d
+WAVE_TABLE_H	./sketch_nov6a/first_pass/wave_table.h	/^#define WAVE_TABLE_H$/;"	d
 WavFileProcessor	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^public class WavFileProcessor {$/;"	c
 WaveTable	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^struct WaveTable {$/;"	s
+WaveTable	./sketch_nov6a/first_pass/wave_table.h	/^struct WaveTable {$/;"	s
 WaveTableOscillator	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^struct WaveTableOscillator {$/;"	s
+WaveTableOscillator	./sketch_nov6a/first_pass/wave_table.h	/^struct WaveTableOscillator {$/;"	s
 __anonffdaaa5f0108	./src/MCP4822.h	/^typedef struct {$/;"	s
 com.userside	./java/usersideapp/src/main/java/com/userside/App.java	/^package com.userside;$/;"	p
 com.userside	./java/usersideapp/src/main/java/com/userside/PrimaryController.java	/^package com.userside;$/;"	p
@@ -124,13 +127,17 @@ normalize8Bit	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.jav
 normalize8BitStereo	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^    private static float[][] normalize8BitStereo(byte[] audioBytes) {$/;"	m	class:WavFileProcessor	file:
 normalizedBuffer	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^    public float[] normalizedBuffer = null;$/;"	f	class:WavFileProcessor
 phase	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    uint64_t phase;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint64_t
+phase	./sketch_nov6a/first_pass/wave_table.h	/^    uint64_t phase;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint64_t
 phase	./src/main.c	/^static uint64_t phase = 0;$/;"	v	typeref:typename:uint64_t	file:
 phase_increment	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    uint64_t phase_increment;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint64_t
+phase_increment	./sketch_nov6a/first_pass/wave_table.h	/^    uint64_t phase_increment;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint64_t
 phase_increment	./src/main.c	/^uint64_t phase_increment;$/;"	v	typeref:typename:uint64_t
 processMonoSoundBuffer	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^    private float[] processMonoSoundBuffer(byte[] audioBuffer, int bitsPerSample) {$/;"	m	class:WavFileProcessor	file:
 processStereoSoundBuffer	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^    private float[] processStereoSoundBuffer(byte[] audioBuffer, int bitsPerSample) {$/;"	m	class:WavFileProcessor	file:
 readWaveFile	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^    public void readWaveFile(File file) {$/;"	m	class:WavFileProcessor
 sample_period_us	./src/main.c	/^uint64_t sample_period_us = 1000000 \/ SAMPLE_RATE;$/;"	v	typeref:typename:uint64_t
+samples	./sketch_nov6a/first_pass/wave_table.h	/^    uint16_t* samples;$/;"	m	struct:WaveTable	typeref:typename:uint16_t *
+samples_per_cycle	./sketch_nov6a/first_pass/wave_table.h	/^    uint32_t samples_per_cycle;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint32_t
 scene	./java/usersideapp/src/main/java/com/userside/App.java	/^    private static Scene scene;$/;"	f	class:App	file:
 sendFile	./java/usersideapp/src/main/java/com/userside/App.java	/^    private void sendFile(StreamConnection connection) {$/;"	m	class:App	file:
 setRoot	./java/usersideapp/src/main/java/com/userside/App.java	/^    static void setRoot(String fxml) throws IOException {$/;"	m	class:App
@@ -146,6 +153,13 @@ table_capacity	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    uint32_t t
 table_count	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    uint32_t table_count;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint32_t
 table_length	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    uint32_t table_length;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint32_t
 tables	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    WaveTable* tables;$/;"	m	struct:WaveTableOscillator	typeref:typename:WaveTable *
+tables	./sketch_nov6a/first_pass/wave_table.h	/^    WaveTable* tables;$/;"	m	struct:WaveTableOscillator	typeref:typename:WaveTable *
+tables_capacity	./sketch_nov6a/first_pass/wave_table.h	/^    uint32_t tables_capacity;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint32_t
+total_cycles	./sketch_nov6a/first_pass/wave_table.h	/^    uint32_t total_cycles;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint32_t
 transferFileToDevice	./java/usersideapp/src/main/java/com/userside/App.java	/^    private void transferFileToDevice() {$/;"	m	class:App	file:
 wavFileProcessor	./java/usersideapp/src/main/java/com/userside/App.java	/^    private WavFileProcessor wavFileProcessor = new WavFileProcessor();$/;"	f	class:App	file:
+wave_table_linear_interpolation	./sketch_nov6a/first_pass/wave_table.cpp	/^uint16_t wave_table_linear_interpolation(const WaveTable* table, uint32_t table_length, uint64_t/;"	f	typeref:typename:uint16_t
+wave_table_oscilator_linear_interpolation	./sketch_nov6a/bluetooth_and_screen/wave_table.cpp	/^uint16_t wave_table_oscilator_linear_interpolation(const WaveTable* table, uint32_t table_length/;"	f	typeref:typename:uint16_t
+wave_table_oscilator_update_phase	./sketch_nov6a/bluetooth_and_screen/wave_table.cpp	/^void wave_table_oscilator_update_phase(WaveTableOscillator* oscilator) {$/;"	f	typeref:typename:void
+wave_table_oscilator_update_phase	./sketch_nov6a/first_pass/wave_table.cpp	/^void wave_table_oscilator_update_phase(WaveTableOscillator* oscilator) {$/;"	f	typeref:typename:void
 wavetable_oscillation	./src/main.c	/^void wavetable_oscillation(uint16_t* wavetable) {$/;"	f	typeref:typename:void

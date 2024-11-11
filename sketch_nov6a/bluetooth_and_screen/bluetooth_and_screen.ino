@@ -27,6 +27,7 @@ struct Button {
 };
 
 void look_for_incoming_bluetooth_messages();
+
 void wave_table_draw(const WaveTable* table, uint32_t table_length);
 void clear_screen(int16_t x, int16_t y);
 void generate_sine_wave(WaveTable* table, uint32_t table_length);
@@ -202,9 +203,6 @@ void redraw_screen() {
   //display.printf("   Table size: %u", osci.table_length);
 }
 
-uint16_t lerp(uint16_t a, uint16_t b, uint32_t fraction) {
-  return a + (((b - a) * fraction) >> 16);
-}
 
 void wave_table_draw(const WaveTable* table, uint32_t table_length) {
   const uint32_t screen_width_with_fraction = SCREEN_WIDTH << 16;
