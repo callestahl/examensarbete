@@ -6,7 +6,7 @@
 #define PIN_WAVETABLE_POSITION 13 
 
 #define WAVETABLE_SIZE 256
-#define SAMPLE_RATE 44100
+#define SAMPLE_RATE 10000
 #define MAX_12BIT_VALUE 4095
 #define MAX_16BIT_VALUE 65535
 
@@ -22,11 +22,13 @@ struct WaveTableOscillator {
   uint64_t phase;
   uint64_t phase_increment;
 
-  uint32_t table_length;
-  uint32_t table_capacity;
-  uint32_t table_count;
+  uint32_t samples_per_cycle;
+  uint32_t max_samples_per_cycle;
+  uint32_t total_cycles;
   WaveTable* tables;
 };
+
+uint64_t last_sample_time;
 
 BluetoothSerial SerialBT;
 WaveTableOscillator osci;
@@ -66,6 +68,8 @@ uint64_t next_sample_time;
 void setup() {
   Serial.begin(9600);
 
+  last_sample_time = micros();
+
   pinMode(2, OUTPUT);
   pinMode(PIN_PITCH_INPUT, INPUT);
   pinMode(PIN_WAVETABLE_POSITION, INPUT);
@@ -76,13 +80,13 @@ void setup() {
   spi.begin();
   dac.begin(PIN_DAC_CS);
 
-  SerialBT.begin("WaveTablePP");
+  SerialBT.begin("WaveTablePP_2");
   SerialBT.enableSSP();
 
   next_sample_time = micros();
 
-  osci.table_capacity = 256;
-  osci.tables = (WaveTable*)calloc(osci.table_capacity, sizeof(WaveTable));
+  osci.max_samples_per_cycle = 256;
+  osci.tables = (WaveTable*)calloc(osci.max_samples_per_cycle, sizeof(WaveTable));
 }
 
 uint16_t val = 0;
@@ -109,8 +113,8 @@ void loop() {
         uint8_t high = SerialBT.read();
         uint8_t low = SerialBT.read();
         uint16_t cycle_sample_count = ((uint16_t)high << 8) | ((uint16_t)low);
-        osci.table_length = cycle_sample_count;
-        osci.table_count = 0;
+        osci.samples_per_cycle = cycle_sample_count;
+        osci.total_cycles = 0;
         header_read = true;
         table_index = 0;
         sample_index = 0;
@@ -120,20 +124,20 @@ void loop() {
         uint8_t sample_high = SerialBT.read();
         uint8_t sample_low = SerialBT.read();
         uint16_t sample = ((uint16_t)sample_high << 8) | ((uint16_t)sample_low);
-        if (table_index < osci.table_capacity) {
+        if (table_index < osci.max_samples_per_cycle) {
           if (sample_index == 0) {
             if (osci.tables[table_index].data != NULL) {
               free(osci.tables[table_index].data);
             }
-            osci.tables[table_index].data = (uint16_t*)calloc(osci.table_length, sizeof(uint16_t));
+            osci.tables[table_index].data = (uint16_t*)calloc(osci.samples_per_cycle, sizeof(uint16_t));
             if (osci.tables[table_index].data != NULL) {
-              osci.table_count++;
+              osci.total_cycles++;
             } else {
               // NOTE(Linus): Logging
             }
           }
           osci.tables[table_index].data[sample_index++] = sample;
-          if (sample_index == osci.table_length) {
+          if (sample_index == osci.samples_per_cycle) {
             sample_index = 0;
             table_index++;
 
@@ -154,10 +158,15 @@ void loop() {
       table_index = 0;
       sample_index = 0;
 
-      if (osci.table_count > 0) {
+      if (osci.total_cycles > 0) {
         display_wave_index = 0;
-        if (osci.table_count > 0 && osci.tables[0].data != NULL) {
-        for (uint32_t i = 0; i < osci.table_length; i++) {
+        if (osci.total_cycles > 0 && osci.tables[0].data != NULL) {
+        Serial.println(osci.samples_per_cycle);
+        Serial.println(osci.max_samples_per_cycle);
+        Serial.println(osci.total_cycles);
+        for (uint32_t i = 0; i <  osci.samples_per_cycle; i++) {
+          Serial.print(i);
+          Serial.print(": ");
           Serial.println(osci.tables[0].data[i]);
         }
 }
@@ -167,9 +176,12 @@ void loop() {
     }
   }
 #endif
-
-  wavetable_oscillation();
-  Serial.println(analogRead(PIN_WAVETABLE_POSITION));
+  if (!reading_bluetooth_values) {
+    wavetable_oscillation();
+  }
+//Serial.println(micros());
+  
+  //Serial.println(analogRead(PIN_WAVETABLE_POSITION));
 }
 
 void generate_sine_wave() {
@@ -182,45 +194,96 @@ void generate_sine_wave() {
 
 void wavetable_oscillation() {
   // Check if there's at least one wavetable available
-  if (osci.table_count == 0 || osci.tables[0].data == NULL) {
-    Serial.println("No wavetable available.");
+  if (osci.total_cycles == 0 || osci.tables[0].data == NULL) {
+    //Serial.println("No wavetable available.");
     return;
   }
 
   uint16_t* wavetable = osci.tables[0].data;  // Use the first wavetable
-  uint32_t wavetable_size = osci.table_length;
+  uint32_t wavetable_size = osci.samples_per_cycle;
 
-  uint16_t adc_value = analogRead(PIN_PITCH_INPUT);
-  uint16_t frequency = analog_input_to_pitch(adc_value);
+  uint16_t pitch_analog_value = analogRead(PIN_PITCH_INPUT);
+  uint16_t frequency = analog_input_to_pitch(pitch_analog_value);
+
+  uint16_t selected_cycle_analog_value = analogRead(PIN_WAVETABLE_POSITION);
+  uint8_t selected_cycle = (selected_cycle_analog_value * osci.total_cycles) / MAX_12BIT_VALUE;
 
   // Calculate the phase increment based on frequency and wavetable size
   phase_increment = ((uint64_t)frequency * wavetable_size << 32) / SAMPLE_RATE;
 
   uint64_t current_time = micros();
+
   if (current_time >= next_sample_time) {
-    uint32_t phase_int = phase >> 32;
-    uint32_t phase_fraction = (phase & 0xFFFFFFFF) >> 16;
+  uint32_t phase_int = phase >> 32;
+  uint32_t phase_fraction = (phase & 0xFFFFFFFF) >> 16;
 
-    // Get the current and next sample values, wrapping the index as needed
-    uint16_t sample1 = wavetable[phase_int];
-    uint16_t sample2 = wavetable[(phase_int + 1) % wavetable_size];
+  // Get the current and next sample values, wrapping the index as needed
+  uint16_t sample1 = wavetable[selected_cycle * phase_int];
+  uint16_t sample2 = wavetable[((selected_cycle * phase_int) + 1) % wavetable_size];
 
-    // Perform linear interpolation
-    uint16_t value = sample1 + (((sample2 - sample1) * phase_fraction) >> 16);
+  // Perform linear interpolation
+  uint16_t value = sample1 + (((sample2 - sample1) * phase_fraction) >> 16);
 
-    // Output the interpolated value to the DAC, scaled to 12-bit range
-    dac.write(value >> 4, 0);
+  // Output the interpolated value to the DAC, scaled to 12-bit range
+  dac.write(value >> 4, 0);
 
-    // Increment the phase, wrapping it at the end of the cycle
-    phase += phase_increment;
-    if (phase >= ((uint64_t)wavetable_size << 32)) {
-      phase -= ((uint64_t)wavetable_size << 32);
-    }
+  // Increment the phase, wrapping it at the end of the cycle
+  phase += phase_increment;
+  if (phase >= ((uint64_t)wavetable_size << 32)) {
+    phase -= ((uint64_t)wavetable_size << 32);
+  }
 
-    // Update the next sample time
-    next_sample_time += sample_period_us;
+  // Update the next sample time
+  next_sample_time += sample_period_us;
   }
 }
+
+// void wavetable_oscillation() {
+//     if (osci.total_cycles == 0 || osci.tables[0].data == NULL) {
+//     //Serial.println("No wavetable available.");
+//     return;
+//   }
+
+//   uint16_t* wavetable = osci.tables[0].data;  // Use the first wavetable
+//   uint32_t wavetable_size = osci.samples_per_cycle;
+
+//   uint16_t pitch_analog_value = analogRead(PIN_PITCH_INPUT);
+//   uint16_t frequency = analog_input_to_pitch(pitch_analog_value);
+
+//   uint16_t selected_cycle_analog_value = analogRead(PIN_WAVETABLE_POSITION);
+//   uint8_t selected_cycle = (selected_cycle_analog_value * osci.total_cycles) / MAX_12BIT_VALUE;
+
+//   // Calculate the phase increment based on frequency and wavetable size
+//   phase_increment = ((uint64_t)frequency * (uint64_t)wavetable_size << 32) / SAMPLE_RATE;
+
+
+//   uint64_t current_time = micros();
+
+//   if (current_time >= next_sample_time) {
+//   uint32_t phase_int = phase >> 32;
+//   uint32_t phase_fraction = (phase & 0xFFFFFFFF) >> 16;
+
+//   // Get the current and next sample values, wrapping the index as needed
+//   uint16_t sample1 = wavetable[selected_cycle * phase_int];
+//   uint16_t sample2 = wavetable[((selected_cycle * phase_int) + 1) % wavetable_size];
+
+//   // Perform linear interpolation
+//   uint16_t value = sample1 + (((sample2 - sample1) * phase_fraction) >> 16);
+
+//   // Output the interpolated value to the DAC, scaled to 12-bit range
+//   dac.write(value >> 4, 0);
+
+//   // Increment the phase, wrapping it at the end of the cycle
+//   phase += phase_increment;
+//   if (phase >= wavetable_size) {
+//     phase -= wavetable_size;
+//   }
+
+//   // Update the next sample time
+//   next_sample_time += sample_period_us;
+// }
+// }
+
 
 
 uint16_t analog_input_to_pitch(uint16_t analog_value) {
