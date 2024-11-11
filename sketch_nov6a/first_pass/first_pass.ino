@@ -94,7 +94,7 @@ const uint64_t bluetooth_time_before_reset = 100000;
 
 void loop() {
 #if 1
-
+  look_for_incoming_bluetooth_messages();
 #endif
   if (!reading_bluetooth_values) {
     wavetable_oscillation();
@@ -185,7 +185,7 @@ void generate_sine_wave() {
 
 void wavetable_oscillation() {
   // Check if there's at least one wavetable available
-  if (osci.total_cycles == 0 || osci.tables[0].samples == NULL) {
+  if (osci.total_cycles == 0 && osci.tables[0].samples == NULL) {
     //Serial.println("No wavetable available.");
     return;
   }
@@ -200,7 +200,7 @@ void wavetable_oscillation() {
   uint16_t selected_cycle = (selected_cycle_analog_value * osci.samples_per_cycle) / MAX_12BIT_VALUE;
 
   // Calculate the phase increment based on frequency and wavetable size
-  phase_increment = ((uint64_t)frequency * wavetable_size << 32) / SAMPLE_RATE;
+  osci.phase_increment = ((uint64_t)frequency * wavetable_size << 32) / SAMPLE_RATE;
 
   uint64_t current_time = micros();
 
