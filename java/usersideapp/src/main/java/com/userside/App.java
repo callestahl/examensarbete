@@ -185,7 +185,7 @@ public class App extends Application {
                         String deviceName = btDevice.getFriendlyName(false);
                         System.out.println("Device found: " + deviceName);
 
-                        if (deviceName.equals("WaveTablePP_2")) {  
+                        if (deviceName.equals("WaveTablePP")) {  
                             esp32Device = btDevice;  
                             Platform.runLater(() -> System.out.println("ESP32 found. Discovering services..."));
 

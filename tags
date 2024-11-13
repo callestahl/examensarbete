@@ -39,6 +39,8 @@
 !_TAG_KIND_DESCRIPTION!CMake	p,project	/projects/
 !_TAG_KIND_DESCRIPTION!CMake	t,target	/targets/
 !_TAG_KIND_DESCRIPTION!CMake	v,variable	/variable definitions/
+!_TAG_KIND_DESCRIPTION!DosBatch	l,label	/labels/
+!_TAG_KIND_DESCRIPTION!DosBatch	v,variable	/variables/
 !_TAG_KIND_DESCRIPTION!Java	a,annotation	/annotation declarations/
 !_TAG_KIND_DESCRIPTION!Java	c,class	/classes/
 !_TAG_KIND_DESCRIPTION!Java	e,enumConstant	/enum constants/
@@ -54,6 +56,7 @@
 !_TAG_PARSER_VERSION!C	0.0	/current.age/
 !_TAG_PARSER_VERSION!C++	0.0	/current.age/
 !_TAG_PARSER_VERSION!CMake	0.0	/current.age/
+!_TAG_PARSER_VERSION!DosBatch	0.0	/current.age/
 !_TAG_PARSER_VERSION!Java	0.0	/current.age/
 !_TAG_PATTERN_LENGTH_LIMIT	96	/0 for no limit/
 !_TAG_PROC_CWD	C:/Users/linus/dev/examensarbete/	//
@@ -68,19 +71,44 @@
 !_TAG_ROLE_DESCRIPTION!C++!header	system	/system header/
 !_TAG_ROLE_DESCRIPTION!C++!macro	undef	/undefined/
 !_TAG_ROLE_DESCRIPTION!Java!package	imported	/imported package/
+APPLICAITON_H	./sketch_nov6a/bluetooth_and_screen/application.h	/^#define APPLICAITON_H$/;"	d
 App	./java/usersideapp/src/main/java/com/userside/App.java	/^public class App extends Application {$/;"	c
+Button	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^struct Button {$/;"	s	file:
+C0_FREQUENCY	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define C0_FREQUENCY /;"	d	file:
 CS	./src/pinDefinitions.h	/^#define CS /;"	d
+HHHHHHH	./commands/buildTime.bat	/^set HHHHHHH=1$/;"	v
+MAX_12BIT_VALUE	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define MAX_12BIT_VALUE /;"	d	file:
 MAX_12BIT_VALUE	./src/main.c	/^#define MAX_12BIT_VALUE /;"	d	file:
+MAX_16BIT_VALUE	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define MAX_16BIT_VALUE /;"	d	file:
 MAX_16BIT_VALUE	./src/main.c	/^#define MAX_16BIT_VALUE /;"	d	file:
 MCP4822	./src/MCP4822.h	/^} MCP4822;$/;"	t	typeref:struct:__anonffdaaa5f0108
 MCP4822_init	./src/MCP4822.c	/^void MCP4822_init(MCP4822* mcp, spi_inst_t* spi, uint cs_pin) {$/;"	f	typeref:typename:void
 MCP4822_setOutput	./src/MCP4822.c	/^void MCP4822_setOutput(MCP4822* mcp, uint8_t channel, uint16_t value) {$/;"	f	typeref:typename:void
+OLED_CS	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define OLED_CS /;"	d	file:
+OLED_DC	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define OLED_DC /;"	d	file:
+OLED_RESET	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define OLED_RESET /;"	d	file:
 ONBOARD_LED	./src/pinDefinitions.h	/^#define ONBOARD_LED /;"	d
+PIN_DAC_CS	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define PIN_DAC_CS /;"	d	file:
+PIN_PITCH_INPUT	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define PIN_PITCH_INPUT /;"	d	file:
+PIN_WAVETABLE_POSITION	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define PIN_WAVETABLE_POSITION /;"	d	file:
+PITCH_INPUT_RANGE	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define PITCH_INPUT_RANGE /;"	d	file:
+POSITION_INPUT	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define POSITION_INPUT /;"	d	file:
 PrimaryController	./java/usersideapp/src/main/java/com/userside/PrimaryController.java	/^public class PrimaryController {$/;"	c
+RGB565	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define RGB565(/;"	d	file:
+SAMPLE_RATE	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define SAMPLE_RATE /;"	d	file:
 SAMPLE_RATE	./src/main.c	/^#define SAMPLE_RATE /;"	d	file:
 SCK	./src/pinDefinitions.h	/^#define SCK /;"	d
+SCREEN_HEIGHT	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define SCREEN_HEIGHT /;"	d	file:
+SCREEN_WIDTH	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define SCREEN_WIDTH /;"	d	file:
+SSD1351_BLACK	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define SSD1351_BLACK /;"	d	file:
+SSD1351_BLUE	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define SSD1351_BLUE /;"	d	file:
+SSD1351_GREEN	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define SSD1351_GREEN /;"	d	file:
+SSD1351_RED	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define SSD1351_RED /;"	d	file:
+SSD1351_WHITE	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define SSD1351_WHITE /;"	d	file:
 SecondaryController	./java/usersideapp/src/main/java/com/userside/SecondaryController.java	/^public class SecondaryController {$/;"	c
+SerialBT	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^BluetoothSerial SerialBT;$/;"	v	typeref:typename:BluetoothSerial
 TX	./src/pinDefinitions.h	/^#define TX /;"	d
+WAVETABLE_SIZE	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^#define WAVETABLE_SIZE /;"	d	file:
 WAVETABLE_SIZE	./src/main.c	/^#define WAVETABLE_SIZE /;"	d	file:
 WAVE_TABLE_H	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^#define WAVE_TABLE_H$/;"	d
 WAVE_TABLE_H	./sketch_nov6a/first_pass/wave_table.h	/^#define WAVE_TABLE_H$/;"	d
@@ -90,6 +118,21 @@ WaveTable	./sketch_nov6a/first_pass/wave_table.h	/^struct WaveTable {$/;"	s
 WaveTableOscillator	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^struct WaveTableOscillator {$/;"	s
 WaveTableOscillator	./sketch_nov6a/first_pass/wave_table.h	/^struct WaveTableOscillator {$/;"	s
 __anonffdaaa5f0108	./src/MCP4822.h	/^typedef struct {$/;"	s
+analog_input_to_pitch	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^uint16_t analog_input_to_pitch(uint16_t analog_value) {$/;"	f	typeref:typename:uint16_t
+application_loop	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^void application_loop() {$/;"	f	typeref:typename:void
+application_setup	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^void application_setup() {$/;"	f	typeref:typename:void
+bluetooth_buffer	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^static char bluetooth_buffer[1024];$/;"	v	typeref:typename:char[1024]	file:
+bluetooth_buffer_size	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^int32_t bluetooth_buffer_size = 0;$/;"	v	typeref:typename:int32_t
+bluetooth_time_before_reset	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^const uint64_t bluetooth_time_before_reset = 100000;$/;"	v	typeref:typename:const uint64_t
+bluetooth_time_to_reset	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^uint64_t bluetooth_time_to_reset = 0;$/;"	v	typeref:typename:uint64_t
+bluetooth_timer	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^uint64_t bluetooth_timer = 0;$/;"	v	typeref:typename:uint64_t
+button0	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^Button button0 = {};$/;"	v	typeref:typename:Button
+button1	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^Button button1 = {};$/;"	v	typeref:typename:Button
+button_pin0	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^const int32_t button_pin0 = 4;$/;"	v	typeref:typename:const int32_t
+button_pin1	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^const int32_t button_pin1 = 2;$/;"	v	typeref:typename:const int32_t
+button_pressed	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^  bool button_pressed;$/;"	m	struct:Button	typeref:typename:bool	file:
+button_repeat_reset	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^uint64_t button_repeat_reset = 0;$/;"	v	typeref:typename:uint64_t
+clear_screen	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^void clear_screen(int16_t x, int16_t y) {$/;"	f	typeref:typename:void
 com.userside	./java/usersideapp/src/main/java/com/userside/App.java	/^package com.userside;$/;"	p
 com.userside	./java/usersideapp/src/main/java/com/userside/PrimaryController.java	/^package com.userside;$/;"	p
 com.userside	./java/usersideapp/src/main/java/com/userside/SecondaryController.java	/^package com.userside;$/;"	p
@@ -100,22 +143,39 @@ convertedBuffer	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.j
 cs_pin	./src/MCP4822.h	/^  uint cs_pin;$/;"	m	struct:__anonffdaaa5f0108	typeref:typename:uint
 currentFile	./java/usersideapp/src/main/java/com/userside/App.java	/^    private File currentFile;$/;"	f	class:App	file:
 currentFileExtension	./java/usersideapp/src/main/java/com/userside/App.java	/^    private String currentFileExtension;$/;"	f	class:App	file:
+cursor_x	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^int16_t cursor_x = 0;$/;"	v	typeref:typename:int16_t
+cursor_y	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^int16_t cursor_y = 0;$/;"	v	typeref:typename:int16_t
 cycleSampleCount	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^    public int cycleSampleCount;$/;"	f	class:WavFileProcessor
-data	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    uint16_t* data;$/;"	m	struct:WaveTable	typeref:typename:uint16_t *
+debounce_delay	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^const uint64_t debounce_delay = 50;$/;"	v	typeref:typename:const uint64_t
+device_connected	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^bool device_connected = false;$/;"	v	typeref:typename:bool
 discoverBluetoothDevices	./java/usersideapp/src/main/java/com/userside/App.java	/^    private void discoverBluetoothDevices() {$/;"	m	class:App	file:
+display	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^Adafruit_SSD1351 display(SCREEN_WIDTH, SCREEN_HEIGHT, &hspi, OLED_CS, OLED_DC,$/;"	v	typeref:typename:Adafruit_SSD1351
+display_wave_index	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^int32_t display_wave_index = 0;$/;"	v	typeref:typename:int32_t
 esp32Device	./java/usersideapp/src/main/java/com/userside/App.java	/^    private RemoteDevice esp32Device;  $/;"	f	class:App	file:
 findSignificantMinima	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^    public static List<Integer> findSignificantMinima(float[] data, float threshold) {$/;"	m	class:WavFileProcessor
+generate_sawtooth_wave	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^void generate_sawtooth_wave(WaveTable* table, uint32_t table_length) {$/;"	f	typeref:typename:void
+generate_sine_wave	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^void generate_sine_wave(WaveTable* table, uint32_t table_length) {$/;"	f	typeref:typename:void
 generate_sine_wave	./src/main.c	/^void generate_sine_wave() {$/;"	f	typeref:typename:void
+generate_square_wave	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^void generate_square_wave(WaveTable* table, uint32_t table_length) {$/;"	f	typeref:typename:void
 getLineChart	./java/usersideapp/src/main/java/com/userside/App.java	/^    private LineChart<Number,Number> getLineChart(ArrayList<Float> values, int offset) {$/;"	m	class:App	file:
+header_read	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^bool header_read = false;$/;"	v	typeref:typename:bool
+header_read_count	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^int32_t header_read_count = 0;$/;"	v	typeref:typename:int32_t
+last_debounce_time	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^  uint64_t last_debounce_time;$/;"	m	struct:Button	typeref:typename:uint64_t	file:
+last_position	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^uint16_t last_position = 0;$/;"	v	typeref:typename:uint16_t
 led_state	./src/main.c	/^bool led_state = false;$/;"	v	typeref:typename:bool
+lerp	./sketch_nov6a/bluetooth_and_screen/wave_table.cpp	/^uint16_t lerp(uint16_t a, uint16_t b, uint32_t fraction) {$/;"	f	typeref:typename:uint16_t
+lerp	./sketch_nov6a/first_pass/wave_table.cpp	/^uint16_t lerp(uint16_t a, uint16_t b, uint32_t fraction) {$/;"	f	typeref:typename:uint16_t
 loadFXML	./java/usersideapp/src/main/java/com/userside/App.java	/^    private static Parent loadFXML(String fxml) throws IOException {$/;"	m	class:App	file:
+look_for_incoming_bluetooth_messages	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^void look_for_incoming_bluetooth_messages() {$/;"	f	typeref:typename:void
 loop	./src/main.c	/^void loop() {$/;"	f	typeref:typename:void
 main	./CMakeLists.txt	/^add_executable(main$/;"	t
 main	./CMakeLists.txt	/^project(main)$/;"	p
 main	./java/usersideapp/src/main/java/com/userside/App.java	/^    public static void main(String[] args) {$/;"	m	class:App
 main	./src/main.c	/^int main() {$/;"	f	typeref:typename:int
 mcp	./src/main.c	/^MCP4822 mcp;$/;"	v	typeref:typename:MCP4822
-name	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    const char* name;$/;"	m	struct:WaveTable	typeref:typename:const char *
+millis_to_next_draw	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^uint64_t millis_to_next_draw;$/;"	v	typeref:typename:uint64_t
+minus_one_wrap	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^uint32_t minus_one_wrap(uint32_t value, uint32_t length) {$/;"	f	typeref:typename:uint32_t
+next_sample_time	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^uint64_t next_sample_time;$/;"	v	typeref:typename:uint64_t
 next_sample_time	./src/main.c	/^uint64_t next_sample_time;$/;"	v	typeref:typename:uint64_t
 normalize16Bit	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^    private static float[] normalize16Bit(byte[] audioBytes) {$/;"	m	class:WavFileProcessor	file:
 normalize16BitStereo	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^    private static float[][] normalize16BitStereo(byte[] audioBytes) {$/;"	m	class:WavFileProcessor	file:
@@ -126,19 +186,31 @@ normalize32BitStereo	./java/usersideapp/src/main/java/com/userside/WavFileProces
 normalize8Bit	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^    private static float[] normalize8Bit(byte[] audioBytes) {$/;"	m	class:WavFileProcessor	file:
 normalize8BitStereo	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^    private static float[][] normalize8BitStereo(byte[] audioBytes) {$/;"	m	class:WavFileProcessor	file:
 normalizedBuffer	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^    public float[] normalizedBuffer = null;$/;"	f	class:WavFileProcessor
+osci	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^WaveTableOscillator osci;$/;"	v	typeref:typename:WaveTableOscillator
 phase	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    uint64_t phase;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint64_t
 phase	./sketch_nov6a/first_pass/wave_table.h	/^    uint64_t phase;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint64_t
 phase	./src/main.c	/^static uint64_t phase = 0;$/;"	v	typeref:typename:uint64_t	file:
 phase_increment	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    uint64_t phase_increment;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint64_t
 phase_increment	./sketch_nov6a/first_pass/wave_table.h	/^    uint64_t phase_increment;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint64_t
 phase_increment	./src/main.c	/^uint64_t phase_increment;$/;"	v	typeref:typename:uint64_t
+plus_one_wrap	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^uint32_t plus_one_wrap(uint32_t value,$/;"	f	typeref:typename:uint32_t
 processMonoSoundBuffer	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^    private float[] processMonoSoundBuffer(byte[] audioBuffer, int bitsPerSample) {$/;"	m	class:WavFileProcessor	file:
 processStereoSoundBuffer	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^    private float[] processStereoSoundBuffer(byte[] audioBuffer, int bitsPerSample) {$/;"	m	class:WavFileProcessor	file:
+process_buttons	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^void process_buttons() {$/;"	f	typeref:typename:void
 readWaveFile	./java/usersideapp/src/main/java/com/userside/WavFileProcessor.java	/^    public void readWaveFile(File file) {$/;"	m	class:WavFileProcessor
+reading_bluetooth_values	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^bool reading_bluetooth_values = false;$/;"	v	typeref:typename:bool
+redraw_screen	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^void redraw_screen() {$/;"	f	typeref:typename:void
+sample_index	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^int32_t sample_index = 0;$/;"	v	typeref:typename:int32_t
+sample_period_us	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^uint64_t sample_period_us = 1000000 \/ SAMPLE_RATE;$/;"	v	typeref:typename:uint64_t
 sample_period_us	./src/main.c	/^uint64_t sample_period_us = 1000000 \/ SAMPLE_RATE;$/;"	v	typeref:typename:uint64_t
+sample_viewer	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^int32_t sample_viewer = 0;$/;"	v	typeref:typename:int32_t
+samples	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    uint16_t* samples;$/;"	m	struct:WaveTable	typeref:typename:uint16_t *
 samples	./sketch_nov6a/first_pass/wave_table.h	/^    uint16_t* samples;$/;"	m	struct:WaveTable	typeref:typename:uint16_t *
+samples_per_cycle	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    uint32_t samples_per_cycle;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint32_t
 samples_per_cycle	./sketch_nov6a/first_pass/wave_table.h	/^    uint32_t samples_per_cycle;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint32_t
 scene	./java/usersideapp/src/main/java/com/userside/App.java	/^    private static Scene scene;$/;"	f	class:App	file:
+screen_width_with_fraction	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^const uint32_t screen_width_with_fraction = SCREEN_WIDTH << 16;$/;"	v	typeref:typename:const uint32_t
+selected_index	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^int32_t selected_index = 0;$/;"	v	typeref:typename:int32_t
 sendFile	./java/usersideapp/src/main/java/com/userside/App.java	/^    private void sendFile(StreamConnection connection) {$/;"	m	class:App	file:
 setRoot	./java/usersideapp/src/main/java/com/userside/App.java	/^    static void setRoot(String fxml) throws IOException {$/;"	m	class:App
 setup	./src/main.c	/^void setup() {$/;"	f	typeref:typename:void
@@ -149,17 +221,24 @@ spi	./src/MCP4822.h	/^  spi_inst_t* spi;$/;"	m	struct:__anonffdaaa5f0108	typeref
 start	./java/usersideapp/src/main/java/com/userside/App.java	/^    public void start(Stage primaryStage) {$/;"	m	class:App
 switchToPrimary	./java/usersideapp/src/main/java/com/userside/SecondaryController.java	/^    private void switchToPrimary() throws IOException {$/;"	m	class:SecondaryController	file:
 switchToSecondary	./java/usersideapp/src/main/java/com/userside/PrimaryController.java	/^    private void switchToSecondary() throws IOException {$/;"	m	class:PrimaryController	file:
-table_capacity	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    uint32_t table_capacity;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint32_t
-table_count	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    uint32_t table_count;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint32_t
-table_length	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    uint32_t table_length;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint32_t
+table_index	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^int32_t table_index = 0;$/;"	v	typeref:typename:int32_t
 tables	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    WaveTable* tables;$/;"	m	struct:WaveTableOscillator	typeref:typename:WaveTable *
 tables	./sketch_nov6a/first_pass/wave_table.h	/^    WaveTable* tables;$/;"	m	struct:WaveTableOscillator	typeref:typename:WaveTable *
+tables_capacity	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    uint32_t tables_capacity;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint32_t
 tables_capacity	./sketch_nov6a/first_pass/wave_table.h	/^    uint32_t tables_capacity;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint32_t
+test	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^bool test = false;$/;"	v	typeref:typename:bool
+text_index	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^uint32_t text_index = 0;$/;"	v	typeref:typename:uint32_t
+time_mi	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^uint64_t time_mi = 0;$/;"	v	typeref:typename:uint64_t
+total_cycles	./sketch_nov6a/bluetooth_and_screen/wave_table.h	/^    uint32_t total_cycles;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint32_t
 total_cycles	./sketch_nov6a/first_pass/wave_table.h	/^    uint32_t total_cycles;$/;"	m	struct:WaveTableOscillator	typeref:typename:uint32_t
 transferFileToDevice	./java/usersideapp/src/main/java/com/userside/App.java	/^    private void transferFileToDevice() {$/;"	m	class:App	file:
 wavFileProcessor	./java/usersideapp/src/main/java/com/userside/App.java	/^    private WavFileProcessor wavFileProcessor = new WavFileProcessor();$/;"	f	class:App	file:
+wave_table_draw	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^void wave_table_draw(const WaveTable* table, uint32_t table_length) {$/;"	f	typeref:typename:void
+wave_table_linear_interpolation	./sketch_nov6a/bluetooth_and_screen/wave_table.cpp	/^uint16_t wave_table_linear_interpolation(const WaveTable* table, uint32_t table_length, uint64_t/;"	f	typeref:typename:uint16_t
 wave_table_linear_interpolation	./sketch_nov6a/first_pass/wave_table.cpp	/^uint16_t wave_table_linear_interpolation(const WaveTable* table, uint32_t table_length, uint64_t/;"	f	typeref:typename:uint16_t
-wave_table_oscilator_linear_interpolation	./sketch_nov6a/bluetooth_and_screen/wave_table.cpp	/^uint16_t wave_table_oscilator_linear_interpolation(const WaveTable* table, uint32_t table_length/;"	f	typeref:typename:uint16_t
 wave_table_oscilator_update_phase	./sketch_nov6a/bluetooth_and_screen/wave_table.cpp	/^void wave_table_oscilator_update_phase(WaveTableOscillator* oscilator) {$/;"	f	typeref:typename:void
 wave_table_oscilator_update_phase	./sketch_nov6a/first_pass/wave_table.cpp	/^void wave_table_oscilator_update_phase(WaveTableOscillator* oscilator) {$/;"	f	typeref:typename:void
+wavetable_oscillation	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^void wavetable_oscillation() {$/;"	f	typeref:typename:void
 wavetable_oscillation	./src/main.c	/^void wavetable_oscillation(uint16_t* wavetable) {$/;"	f	typeref:typename:void
+window_height_75_procent	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^const uint32_t window_height_75_procent = (SCREEN_HEIGHT * 3) \/ 4;$/;"	v	typeref:typename:const uint32_t
+y_position_75_procent	./sketch_nov6a/bluetooth_and_screen/application.cpp	/^uint32_t y_position_75_procent(uint16_t data) {$/;"	f	typeref:typename:uint32_t
