@@ -38,8 +38,6 @@ struct Button
     uint64_t last_debounce_time;
 };
 
-void spp_look_for_incoming_messages();
-
 void wave_table_draw(const WaveTable* table, uint32_t table_length);
 void clear_screen(int16_t x, int16_t y);
 void generate_sine_wave(WaveTable* table, uint32_t table_length);

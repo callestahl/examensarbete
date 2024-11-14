@@ -25,7 +25,6 @@ void wave_table_oscilator_clean(WaveTableOscillator* oscilator)
     oscilator->phase = 0;
     oscilator->phase_increment = 0;
     oscilator->samples_per_cycle = 0;
-    oscilator->total_cycles = 0;
     if (oscilator->tables != NULL)
     {
         for (uint32_t i = 0; i < oscilator->total_cycles; ++i)
@@ -36,4 +35,5 @@ void wave_table_oscilator_clean(WaveTableOscillator* oscilator)
             }
         }
     }
+    oscilator->total_cycles = 0;
 }

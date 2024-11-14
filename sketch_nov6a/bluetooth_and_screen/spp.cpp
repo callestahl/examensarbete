@@ -29,26 +29,8 @@ struct SPP
     uint64_t time_before_reset;
 };
 
-global WaveTableOscillator temp_osci = {0};
+global WaveTableOscillator temp_osci = { 0 };
 global SPP g_spp;
-
-internal uint16_t spp_get_uint16()
-{
-    uint8_t high = g_spp.bs.read();
-    uint8_t low = g_spp.bs.read();
-    return ((uint16_t)high << 8) | ((uint16_t)low);
-}
-
-internal uint16_t spp_sample_key(uint16_t key)
-{
-    key = ~key + (key << 15);
-    key = key ^ (key >> 12);
-    key = key + (key << 2);
-    key = key ^ (key >> 4);
-    key = key * 2057;
-    key = key ^ (key >> 16);
-    return key;
-}
 
 internal void spp_clear_buffer()
 {
@@ -79,6 +61,21 @@ internal bool spp_has_timed_out(uint64_t start_time, uint64_t time_to_timeout)
     return false;
 }
 
+internal uint16_t spp_get_uint16()
+{
+    uint8_t high = g_spp.bs.read();
+    uint8_t low = g_spp.bs.read();
+    return ((uint16_t)high << 8) | ((uint16_t)low);
+}
+
+internal void spp_revert_transaction()
+{
+    spp_reset();
+    spp_clear_buffer();
+    wave_table_oscilator_clean(&temp_osci);
+    g_spp.bs.write(BLUETOOTH_ERROR_CODE);
+}
+
 internal bool spp_read_header()
 {
     uint16_t id0 = spp_get_uint16();
@@ -97,12 +94,21 @@ internal bool spp_read_header()
     }
     else
     {
-        spp_reset();
-        spp_clear_buffer();
-        g_spp.bs.write(BLUETOOTH_ERROR_CODE);
+        spp_revert_transaction();
         return false;
     }
     return true;
+}
+
+internal uint16_t spp_sample_key(uint16_t key)
+{
+    key = ~key + (key << 15);
+    key = key ^ (key >> 12);
+    key = key + (key << 2);
+    key = key ^ (key >> 4);
+    key = key * 2057;
+    key = key ^ (key >> 16);
+    return key;
 }
 
 internal bool spp_process_sample()
@@ -127,7 +133,9 @@ internal bool spp_process_sample()
                 }
                 else
                 {
-                    // NOTE(Linus): Logging
+                    // TODO(Linus): Logging
+                    spp_revert_transaction();
+                    return false;
                 }
             }
             temp_osci.tables[g_spp.table_index].samples[g_spp.sample_index++] =
@@ -143,10 +151,7 @@ internal bool spp_process_sample()
     }
     else
     {
-        spp_reset();
-        spp_clear_buffer();
-        wave_table_oscilator_clean(&temp_osci);
-        g_spp.bs.write(BLUETOOTH_ERROR_CODE);
+        spp_revert_transaction();
         return false;
     }
     return true;
