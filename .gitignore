@@ -1,2 +1,6 @@
 build
+.project
+.settings
+.classpath
+target
 tags

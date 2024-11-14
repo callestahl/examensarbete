@@ -1,10 +1,10 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
-#include <Arduino.h>
 #include <SPI.h>
 
 #include "BluetoothSerial.h"
 #include "wave_table.h"
+#include "spp.h"
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128
@@ -32,16 +32,13 @@
 #define SSD1351_GREEN RGB565(0, 63, 0)
 #define SSD1351_BLUE RGB565(0, 0, 31)
 
-#define BLUETOOTH_FINISHED_CODE 0x06
-#define BLUETOOTH_ACKNOWLEDGE_CODE 0x08
-#define BLUETOOTH_ERROR_CODE 0x10
-
-struct Button {
+struct Button
+{
     bool button_pressed;
     uint64_t last_debounce_time;
 };
 
-void look_for_incoming_bluetooth_messages();
+void spp_look_for_incoming_messages();
 
 void wave_table_draw(const WaveTable* table, uint32_t table_length);
 void clear_screen(int16_t x, int16_t y);
@@ -55,23 +52,7 @@ SPIClass hspi(HSPI);
 
 Adafruit_SSD1351 display(SCREEN_WIDTH, SCREEN_HEIGHT, &hspi, OLED_CS, OLED_DC,
                          OLED_RESET);
-BluetoothSerial SerialBT;
 WaveTableOscillator osci;
-WaveTableOscillator temp_osci;
-
-static char bluetooth_buffer[1024];
-int32_t bluetooth_buffer_size = 0;
-bool reading_bluetooth_values = false;
-
-uint64_t millis_to_next_draw;
-
-uint64_t time_mi = 0;
-uint32_t text_index = 0;
-
-int16_t cursor_x = 0;
-int16_t cursor_y = 0;
-
-bool device_connected = false;
 int32_t display_wave_index = 0;
 int32_t selected_index = 0;
 
@@ -81,27 +62,15 @@ const uint64_t debounce_delay = 50;
 Button button0 = {};
 Button button1 = {};
 
-bool header_read = false;
-int32_t table_index = 0;
-int32_t sample_index = 0;
-
 int32_t sample_viewer = 0;
-
-int32_t header_read_count = 0;
-
-bool test = false;
-
-uint64_t bluetooth_timer = 0;
-uint64_t bluetooth_time_to_reset = 0;
-const uint64_t bluetooth_time_before_reset = 100000;
 
 uint64_t button_repeat_reset = 0;
 
 uint64_t sample_period_us = 1000000 / SAMPLE_RATE;
 uint64_t next_sample_time;
 
-void application_setup() {
-#if 1
+void application_setup()
+{
     pinMode(button_pin0, INPUT);
     pinMode(button_pin1, INPUT);
 
@@ -115,179 +84,33 @@ void application_setup() {
 
     next_sample_time = micros();
 
-#endif
-    millis_to_next_draw = millis();
-
-#if 1
     Serial.begin(115200);
-    SerialBT.begin("WaveTablePP");
-    SerialBT.enableSSP();
-#endif
+
+    spp_setup("WaveTablePP");
 
     osci.tables_capacity = 256;
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
-    temp_osci.tables_capacity = 256;
-    temp_osci.tables =
-        (WaveTable*)calloc(temp_osci.tables_capacity, sizeof(WaveTable));
-
-#if 0
-  osci.tables[0].data = (uint16_t*)calloc(osci.table_length, sizeof(uint16_t));
-  osci.tables[1].data = (uint16_t*)calloc(osci.table_length, sizeof(uint16_t));
-  osci.tables[2].data = (uint16_t*)calloc(osci.table_length, sizeof(uint16_t));
-  generate_sine_wave(&osci.tables[0], osci.table_length);
-  generate_sawtooth_wave(&osci.tables[1], osci.table_length);
-  generate_square_wave(&osci.tables[2], osci.table_length);
-
-  redraw_screen();
-#endif
 
     // xTaskCreatePinnedToCore(draw_text, "Draws texts", 1024, NULL, 1, NULL,
     // 0);
 }
 
-void application_loop() {
-#if 1
-    look_for_incoming_bluetooth_messages();
+void application_loop()
+{
+    if (spp_look_for_incoming_messages(&osci))
+    {
+        display_wave_index = 0;
+        redraw_screen();
+    }
     process_buttons();
-    if (!reading_bluetooth_values && osci.total_cycles > 0) {
+    if (osci.total_cycles > 0)
+    {
         wavetable_oscillation();
     }
-#endif
 }
 
-struct BluetoothHeader {
-    uint16_t id0;
-    uint16_t id1;
-    uint16_t id2;
-    uint16_t id3;
-    uint16_t cycle_sample_count;
-};
-
-uint16_t get_serial_uint16() {
-    uint8_t high = SerialBT.read();
-    uint8_t low = SerialBT.read();
-    return ((uint16_t)high << 8) | ((uint16_t)low);
-}
-
-uint16_t sample_key(uint16_t key) {
-    key = ~key + (key << 15);
-    key = key ^ (key >> 12);
-    key = key + (key << 2);
-    key = key ^ (key >> 4);
-    key = key * 2057;
-    key = key ^ (key >> 16);
-    return key;
-}
-
-void wave_table_oscilator_clean(WaveTableOscillator* oscilator) {
-    oscilator->phase = 0;
-    oscilator->phase_increment = 0;
-    oscilator->samples_per_cycle = 0;
-    oscilator->total_cycles = 0;
-    if (oscilator->tables != NULL) {
-        for (uint32_t i = 0; i < oscilator->total_cycles; ++i) {
-            if (oscilator->tables[i].samples != NULL) {
-                free(oscilator->tables[i].samples);
-            }
-        }
-    }
-}
-
-void look_for_incoming_bluetooth_messages() {
-    while (SerialBT.available()) {
-        if (!header_read) {
-            if (SerialBT.available() >= sizeof(BluetoothHeader)) {
-                uint16_t id0 = get_serial_uint16();
-                uint16_t id1 = get_serial_uint16();
-                uint16_t id2 = get_serial_uint16();
-                uint16_t id3 = get_serial_uint16();
-                if (id0 == 29960 && id1 == 62903 && id2 == 35185 &&
-                    id3 == 26662) {
-                    uint16_t cycle_sample_count = get_serial_uint16();
-                    temp_osci.samples_per_cycle = cycle_sample_count;
-                    temp_osci.total_cycles = 0;
-                    header_read = true;
-                    table_index = 0;
-                    sample_index = 0;
-                    SerialBT.write(BLUETOOTH_ACKNOWLEDGE_CODE);
-                } else {
-                    while (SerialBT.available()) {
-                        SerialBT.read();  // Clear the buffer
-                    }
-                    SerialBT.write(BLUETOOTH_ERROR_CODE);
-                    break;
-                }
-            }
-        } else {
-            if (SerialBT.available() >= 4) {
-                uint16_t key = get_serial_uint16();
-                uint16_t sample = get_serial_uint16();
-                if (key == sample_key(sample)) {
-                    if (table_index < temp_osci.tables_capacity) {
-                        if (sample_index == 0) {
-                            if (temp_osci.tables[table_index].samples != NULL) {
-                                free(temp_osci.tables[table_index].samples);
-                            }
-                            temp_osci.tables[table_index].samples =
-                                (uint16_t*)calloc(temp_osci.samples_per_cycle,
-                                                  sizeof(uint16_t));
-                            if (temp_osci.tables[table_index].samples != NULL) {
-                                temp_osci.total_cycles++;
-                            } else {
-                                // NOTE(Linus): Logging
-                            }
-                        }
-                        temp_osci.tables[table_index].samples[sample_index++] =
-                            sample;
-                        if (sample_index == temp_osci.samples_per_cycle) {
-                            sample_index = 0;
-                            table_index++;
-
-                            SerialBT.write(BLUETOOTH_ACKNOWLEDGE_CODE);
-                        }
-                    }
-                } else {
-                    while (SerialBT.available()) {
-                        SerialBT.read();  // Clear the buffer
-                    }
-                    wave_table_oscilator_clean(&temp_osci);
-                    reading_bluetooth_values = false;
-                    header_read = false;
-                    table_index = 0;
-                    sample_index = 0;
-                    SerialBT.write(BLUETOOTH_ERROR_CODE);
-                    break;
-                }
-            }
-            reading_bluetooth_values = true;
-        }
-        bluetooth_time_to_reset = micros() + bluetooth_time_before_reset;
-    }
-
-    if (reading_bluetooth_values) {
-        bluetooth_timer = micros();
-        if (bluetooth_timer >= bluetooth_time_to_reset) {
-            reading_bluetooth_values = false;
-            header_read = false;
-            table_index = 0;
-            sample_index = 0;
-
-            SerialBT.write(BLUETOOTH_FINISHED_CODE);
-
-            if (temp_osci.total_cycles > 0) {
-                wave_table_oscilator_clean(&osci);
-                WaveTable* temp = osci.tables;
-                osci = temp_osci;
-                temp_osci.tables = temp;
-
-                display_wave_index = 0;
-                redraw_screen();
-            }
-        }
-    }
-}
-
-void redraw_screen() {
+void redraw_screen()
+{
     display.fillScreen(SSD1351_BLACK);
 #if 1
 
@@ -308,12 +131,14 @@ void redraw_screen() {
 const uint32_t screen_width_with_fraction = SCREEN_WIDTH << 16;
 const uint32_t window_height_75_procent = (SCREEN_HEIGHT * 3) / 4;
 
-uint32_t y_position_75_procent(uint16_t data) {
+uint32_t y_position_75_procent(uint16_t data)
+{
     return window_height_75_procent -
            ((data * window_height_75_procent) / MAX_16BIT_VALUE);
 }
 
-void wave_table_draw(const WaveTable* table, uint32_t table_length) {
+void wave_table_draw(const WaveTable* table, uint32_t table_length)
+{
     const uint32_t x_step = (screen_width_with_fraction / (table_length / 2));
 
     uint32_t x0 = 0;
@@ -321,7 +146,8 @@ void wave_table_draw(const WaveTable* table, uint32_t table_length) {
         window_height_75_procent -
         ((table->samples[0] * window_height_75_procent) / MAX_16BIT_VALUE);
 
-    for (uint32_t i = 2; i < table_length; i += 2) {
+    for (uint32_t i = 2; i < table_length; i += 2)
+    {
         uint32_t x1 = x0 + x_step;
         uint32_t y1 = y_position_75_procent(table->samples[i]);
         display.drawLine(x0 >> 16, y0, x1 >> 16, y1, SSD1351_RED);
@@ -331,84 +157,104 @@ void wave_table_draw(const WaveTable* table, uint32_t table_length) {
     }
 }
 
-void clear_screen(int16_t x, int16_t y) {
+void clear_screen(int16_t x, int16_t y)
+{
     display.fillScreen(SSD1351_BLACK);
     display.setCursor(x, y);
 }
 
-void generate_sine_wave(WaveTable* table, uint32_t table_length) {
-    for (int i = 0; i < table_length; i++) {
+void generate_sine_wave(WaveTable* table, uint32_t table_length)
+{
+    for (int i = 0; i < table_length; i++)
+    {
         table->samples[i] = (uint16_t)(MAX_16BIT_VALUE / 2 *
                                        (1 + sin(2 * M_PI * i / table_length)));
     }
 }
 
-void generate_sawtooth_wave(WaveTable* table, uint32_t table_length) {
-    for (int i = 0; i < table_length; i++) {
+void generate_sawtooth_wave(WaveTable* table, uint32_t table_length)
+{
+    for (int i = 0; i < table_length; i++)
+    {
         table->samples[i] = (uint16_t)((MAX_16BIT_VALUE * i) / table_length);
     }
 }
 
-void generate_square_wave(WaveTable* table, uint32_t table_length) {
-    for (int i = 0; i < table_length; i++) {
+void generate_square_wave(WaveTable* table, uint32_t table_length)
+{
+    for (int i = 0; i < table_length; i++)
+    {
         table->samples[i] = (i < table_length / 2) ? MAX_16BIT_VALUE : 0;
     }
 }
 
-void process_buttons() {
+uint32_t plus_one_wrap(uint32_t value, uint32_t length)
+{
+    return (value + 1) % length;
+}
+
+uint32_t minus_one_wrap(uint32_t value, uint32_t length)
+{
+    return (value + (length - 1)) % length;
+}
+
+void process_buttons()
+{
     const int32_t button_state0 = digitalRead(button_pin0);
-    if (button_state0 == HIGH) {
+    if (button_state0 == HIGH)
+    {
         if ((millis() >= button_repeat_reset) ||
             (!button0.button_pressed &&
-             ((millis() - button0.last_debounce_time) > debounce_delay))) {
-            display_wave_index = (display_wave_index + 1) % osci.total_cycles;
+             ((millis() - button0.last_debounce_time) > debounce_delay)))
+        {
+            display_wave_index =
+                plus_one_wrap(display_wave_index, osci.total_cycles);
 
             button0.button_pressed = true;
             button0.last_debounce_time = millis();
             button_repeat_reset = millis() + 200;
         }
-    } else {
+    }
+    else
+    {
         if (button0.button_pressed &&
-            ((millis() - button0.last_debounce_time) > debounce_delay)) {
+            ((millis() - button0.last_debounce_time) > debounce_delay))
+        {
             button0.button_pressed = false;
             button0.last_debounce_time = millis();
         }
     }
 
     const int32_t button_state1 = digitalRead(button_pin1);
-    if (button_state1 == HIGH) {
+    if (button_state1 == HIGH)
+    {
         if (!button1.button_pressed &&
-            ((millis() - button1.last_debounce_time) > debounce_delay)) {
+            ((millis() - button1.last_debounce_time) > debounce_delay))
+        {
             display_wave_index =
-                (display_wave_index + (osci.total_cycles - 1)) %
-                osci.total_cycles;
+                minus_one_wrap(display_wave_index, osci.total_cycles);
 
             button1.button_pressed = true;
             button1.last_debounce_time = millis();
         }
-    } else {
+    }
+    else
+    {
         if (button1.button_pressed &&
-            ((millis() - button1.last_debounce_time) > debounce_delay)) {
+            ((millis() - button1.last_debounce_time) > debounce_delay))
+        {
             button1.button_pressed = false;
             button1.last_debounce_time = millis();
         }
     }
 }
 
-uint16_t last_position = 0;
-
-uint32_t plus_one_wrap(uint32_t value, uint32_t length) {
-    return (value + 1) % length;
-}
-
-uint32_t minus_one_wrap(uint32_t value, uint32_t length) {
-    return (value + (length - 1)) % length;
-}
-
 uint16_t last_selected_cycle = MAX_16BIT_VALUE;
 
-void wavetable_oscillation() {
-    if (osci.total_cycles == 0 || osci.tables[0].samples == NULL) {
+void wavetable_oscillation()
+{
+    if (osci.total_cycles == 0 || osci.tables[0].samples == NULL)
+    {
         return;
     }
 
@@ -428,8 +274,10 @@ void wavetable_oscillation() {
 
     uint64_t current_time = micros();
 
-    if (current_time >= next_sample_time) {
-        if (selected_cycle != last_selected_cycle) {
+    if (current_time >= next_sample_time)
+    {
+        if (selected_cycle != last_selected_cycle)
+        {
             redraw_screen();
             last_selected_cycle = selected_cycle;
         }
@@ -445,7 +293,8 @@ void wavetable_oscillation() {
     }
 }
 
-uint16_t analog_input_to_pitch(uint16_t analog_value) {
+uint16_t analog_input_to_pitch(uint16_t analog_value)
+{
     float voltage = (float)analog_value / MAX_12BIT_VALUE * PITCH_INPUT_RANGE;
     float frequency = C0_FREQUENCY * pow(2, voltage);
     return frequency;

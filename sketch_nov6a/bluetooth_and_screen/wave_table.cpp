@@ -1,4 +1,6 @@
 #include "wave_table.h"
+#include <stdlib.h>
+
 uint16_t lerp(uint16_t a, uint16_t b, uint32_t fraction) {
   return a + (((b - a) * fraction) >> 16);
 }
@@ -16,4 +18,22 @@ void wave_table_oscilator_update_phase(WaveTableOscillator* oscilator) {
   if (oscilator->phase >= ((uint64_t)oscilator->samples_per_cycle << 32)) {
     oscilator->phase -= ((uint64_t)oscilator->samples_per_cycle << 32);
   }
+}
+
+void wave_table_oscilator_clean(WaveTableOscillator* oscilator)
+{
+    oscilator->phase = 0;
+    oscilator->phase_increment = 0;
+    oscilator->samples_per_cycle = 0;
+    oscilator->total_cycles = 0;
+    if (oscilator->tables != NULL)
+    {
+        for (uint32_t i = 0; i < oscilator->total_cycles; ++i)
+        {
+            if (oscilator->tables[i].samples != NULL)
+            {
+                free(oscilator->tables[i].samples);
+            }
+        }
+    }
 }
