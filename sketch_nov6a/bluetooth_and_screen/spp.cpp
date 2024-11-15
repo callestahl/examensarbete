@@ -19,17 +19,19 @@ struct BluetoothHeader
 struct SPP
 {
     BluetoothSerial bs;
-    bool initialized;
-    bool header_read;
+    
     int32_t table_index;
     int32_t sample_index;
+
+    bool initialized;
+    bool header_read;
     bool reading_samples;
 
     uint64_t time_to_reset;
     uint64_t time_before_reset;
 };
 
-global WaveTableOscillator temp_osci = { 0 };
+global WaveTableOscillator g_temp_osci = { 0 };
 global SPP g_spp;
 
 internal void spp_clear_buffer()
@@ -54,7 +56,7 @@ internal bool spp_has_timed_out(uint64_t start_time, uint64_t time_to_timeout)
     {
         spp_reset();
         spp_clear_buffer();
-        wave_table_oscilator_clean(&temp_osci);
+        wave_table_oscilator_clean(&g_temp_osci);
         g_spp.bs.write(BLUETOOTH_ERROR_CODE);
         return true;
     }
@@ -72,7 +74,7 @@ internal void spp_revert_transaction()
 {
     spp_reset();
     spp_clear_buffer();
-    wave_table_oscilator_clean(&temp_osci);
+    wave_table_oscilator_clean(&g_temp_osci);
     g_spp.bs.write(BLUETOOTH_ERROR_CODE);
 }
 
@@ -85,8 +87,8 @@ internal bool spp_read_header()
     if (id0 == 29960 && id1 == 62903 && id2 == 35185 && id3 == 26662)
     {
         uint16_t cycle_sample_count = spp_get_uint16();
-        temp_osci.samples_per_cycle = cycle_sample_count;
-        temp_osci.total_cycles = 0;
+        g_temp_osci.samples_per_cycle = cycle_sample_count;
+        g_temp_osci.total_cycles = 0;
         g_spp.header_read = true;
         g_spp.table_index = 0;
         g_spp.sample_index = 0;
@@ -117,19 +119,19 @@ internal bool spp_process_sample()
     uint16_t sample = spp_get_uint16();
     if (key == spp_sample_key(sample))
     {
-        if (g_spp.table_index < temp_osci.tables_capacity)
+        if (g_spp.table_index < g_temp_osci.tables_capacity)
         {
             if (g_spp.sample_index == 0)
             {
-                if (temp_osci.tables[g_spp.table_index].samples != NULL)
+                if (g_temp_osci.tables[g_spp.table_index].samples != NULL)
                 {
-                    free(temp_osci.tables[g_spp.table_index].samples);
+                    free(g_temp_osci.tables[g_spp.table_index].samples);
                 }
-                temp_osci.tables[g_spp.table_index].samples = (uint16_t*)calloc(
-                    temp_osci.samples_per_cycle, sizeof(uint16_t));
-                if (temp_osci.tables[g_spp.table_index].samples != NULL)
+                g_temp_osci.tables[g_spp.table_index].samples = (uint16_t*)calloc(
+                    g_temp_osci.samples_per_cycle, sizeof(uint16_t));
+                if (g_temp_osci.tables[g_spp.table_index].samples != NULL)
                 {
-                    temp_osci.total_cycles++;
+                    g_temp_osci.total_cycles++;
                 }
                 else
                 {
@@ -138,9 +140,9 @@ internal bool spp_process_sample()
                     return false;
                 }
             }
-            temp_osci.tables[g_spp.table_index].samples[g_spp.sample_index++] =
+            g_temp_osci.tables[g_spp.table_index].samples[g_spp.sample_index++] =
                 sample;
-            if (g_spp.sample_index == temp_osci.samples_per_cycle)
+            if (g_spp.sample_index == g_temp_osci.samples_per_cycle)
             {
                 g_spp.sample_index = 0;
                 g_spp.table_index++;
@@ -165,9 +167,9 @@ void spp_setup(const char* name)
         g_spp.bs.enableSSP();
         g_spp.initialized = true;
         g_spp.time_before_reset = 100;
-        temp_osci.tables_capacity = 256;
-        temp_osci.tables =
-            (WaveTable*)calloc(temp_osci.tables_capacity, sizeof(WaveTable));
+        g_temp_osci.tables_capacity = 256;
+        g_temp_osci.tables =
+            (WaveTable*)calloc(g_temp_osci.tables_capacity, sizeof(WaveTable));
     }
     else
     {
@@ -213,12 +215,12 @@ bool spp_look_for_incoming_messages(WaveTableOscillator* oscilator)
         {
             spp_reset();
             g_spp.bs.write(BLUETOOTH_FINISHED_CODE);
-            if (temp_osci.total_cycles > 0)
+            if (g_temp_osci.total_cycles > 0)
             {
                 wave_table_oscilator_clean(oscilator);
                 WaveTable* temp = oscilator->tables;
-                *oscilator = temp_osci;
-                temp_osci.tables = temp;
+                *oscilator = g_temp_osci;
+                g_temp_osci.tables = temp;
                 return true;
             }
         }
