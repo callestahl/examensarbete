@@ -311,7 +311,6 @@ public class App extends Application {
             int id2 = 35185;
             int id3 = 26662;
 
-            wavFileProcessor.cycleSampleCount = 151;
             System.out.println(wavFileProcessor.cycleSampleCount);
             byte cycleSampleCountLow = low(wavFileProcessor.cycleSampleCount);
             byte cycleSampleCountHigh = high(wavFileProcessor.cycleSampleCount); 
@@ -322,7 +321,7 @@ public class App extends Application {
             boolean error = false;
             error = !wait_for_respons(inputStream, 0x08, 0x10);
         
-            int cyclesToSend = Math.min(32, wavFileProcessor.normalizedBuffer.length / wavFileProcessor.cycleSampleCount);
+            int cyclesToSend = Math.min(128, wavFileProcessor.normalizedBuffer.length / wavFileProcessor.cycleSampleCount);
             int bytesPerCycle = wavFileProcessor.cycleSampleCount * 2;
             for (int i = 0; i < cyclesToSend && !error; i++) {
                 int offset = i * bytesPerCycle;

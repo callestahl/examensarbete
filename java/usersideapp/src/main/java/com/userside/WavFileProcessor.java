@@ -3,6 +3,7 @@ package com.userside;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import javax.sound.sampled.AudioFormat;
@@ -58,43 +59,8 @@ public class WavFileProcessor {
                 }
 
                 float[] smooth = smoothArray(shiftAvgDifference, 5);
-
-                int scanCount = 50;
-                ArrayList<Integer> smallestIndex = new ArrayList<>();
-                boolean jump = false;
-                for(int j = 0; j < smooth.length; ++j) {
-                    for(int h = 1; h <= scanCount; ++h) {
-                        int rightIndex = j + h;
-                        int leftIndex = j - h;
-                        if(leftIndex >= 0) {
-                            if(smooth[leftIndex] < smooth[j]) {
-                                jump = true;                 
-                                break;
-                            }
-                        }
-                        if (rightIndex < smooth.length) {
-                            if(smooth[rightIndex] < smooth[j]) {
-                                jump = true;                 
-                                break;
-                            }
-                        }
-                    }
-                    if(!jump) {
-                        smallestIndex.add(j);
-                    }
-                    jump = false;
-                }
-
-                ArrayList<Integer> counts = new ArrayList<>();
-                for(int j = 1; j < smallestIndex.size(); ++j) {
-                    counts.add(smallestIndex.get(j) - smallestIndex.get(j - 1));
-                }
-
-                int sum = 0;
-                for(int count : counts) {
-                    sum += count;
-                }
-                cycleSampleCount = sum / counts.size();
+                ArrayList<Integer> smallestIndex = find_local_minima(smooth);
+                cycleSampleCount = calculate_samples_per_cycle(smallestIndex);
 
                 convertedBuffer = new byte[normalizedBuffer.length * 2];
                 for (int i = 0; i < normalizedBuffer.length; i++) {
@@ -112,6 +78,70 @@ public class WavFileProcessor {
                 e.printStackTrace();
             }
         }
+    }
+
+    private static ArrayList<Integer> find_local_minima(float[] smooth) {
+        int lastIndex = 0;
+        int scanCount = smooth.length / 10;
+        ArrayList<Integer> smallestIndex = new ArrayList<>();
+        for(int j = 0; j < smooth.length; ++j) {
+            boolean jump = false;
+            for(int h = 1; h <= scanCount; ++h) {
+                int rightIndex = j + h;
+                int leftIndex = j - h;
+                if(leftIndex >= 0) {
+                    if(smooth[leftIndex] < smooth[j]) {
+                        jump = true;                 
+                        break;
+                    }
+                }
+                if (rightIndex < smooth.length) {
+                    if(smooth[rightIndex] < smooth[j]) {
+                        jump = true;                 
+                        break;
+                    }
+                }
+            }
+            if(!jump) {
+                smallestIndex.add(j);
+                System.out.println(j - lastIndex);
+                lastIndex = j;
+            }
+        }
+        return smallestIndex;
+    }
+
+    private static int calculate_samples_per_cycle(ArrayList<Integer> smallestIndex) {
+        ArrayList<Integer> counts = new ArrayList<>();
+        for(int j = 1; j < smallestIndex.size(); ++j) {
+            int sampleCount = smallestIndex.get(j) - smallestIndex.get(j - 1);
+            counts.add(sampleCount);
+        }
+
+        counts.add(0);
+        Collections.sort(counts);
+
+        int median = 0;
+        int size = counts.size();
+        if(size % 2 == 0) {
+            median = (counts.get(size / 2 - 1) + counts.get(size / 2)) / 2;
+        } else {
+            median = counts.get(size / 2);
+        }
+
+        int threshold = 8;
+        ArrayList<Integer> filteredCounts = new ArrayList<>();
+        for(int count : counts) {
+            if(Math.abs(count - median) <= threshold) {
+                filteredCounts.add(count);
+            }
+        }
+
+        int sum = 0;
+        for(int filteredCount: filteredCounts) {
+            sum += filteredCount;
+        }
+        return sum / filteredCounts.size();
     }
 
     private static float[] smoothArray(ArrayList<Float> array, int windowSize) {

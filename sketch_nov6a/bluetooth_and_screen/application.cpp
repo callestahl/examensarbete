@@ -16,7 +16,7 @@
 #define PIN_WAVETABLE_POSITION 33
 
 #define WAVETABLE_SIZE 256
-#define SAMPLE_RATE 10000
+#define SAMPLE_RATE 44100
 #define MAX_12BIT_VALUE 4095
 #define MAX_16BIT_VALUE 65535
 
@@ -34,6 +34,9 @@
 #define SSD1351_GREEN RGB565(0, 63, 0)
 #define SSD1351_BLUE RGB565(0, 0, 31)
 
+#define STACK_SIZE 2048
+#define QUEUE_LENGTH 10
+
 struct Button
 {
     bool button_pressed;
@@ -43,7 +46,7 @@ struct Button
 void wave_table_draw(const WaveTable* table, uint32_t table_length);
 void clear_screen(int16_t x, int16_t y);
 void generate_sine_wave(WaveTable* table, uint32_t table_length);
-void redraw_screen(uint16_t selected_cycle);
+void redraw_screen(uint16_t cycle_index);
 void process_buttons();
 void wavetable_oscillation();
 uint16_t analog_input_to_pitch(uint16_t analog_value);
@@ -74,6 +77,28 @@ uint64_t button_repeat_reset = 0;
 uint64_t sample_period_us = 1000000 / SAMPLE_RATE;
 uint64_t next_sample_time;
 
+QueueHandle_t cycle_queue;
+
+volatile uint16_t g_selected_cycle = 0;
+
+void redraw_screen_task(void* data)
+{
+    uint16_t last_drawn_cycle = MAX_16BIT_VALUE;
+    while (true)
+    {
+        vTaskDelay(pdMS_TO_TICKS(100));
+
+        if (g_selected_cycle != last_drawn_cycle)
+        {
+            last_drawn_cycle = g_selected_cycle;
+            if (osci.total_cycles > 0)
+            {
+                redraw_screen(last_drawn_cycle);
+            }
+        }
+    }
+}
+
 void application_setup()
 {
     Serial.begin(115200);
@@ -102,6 +127,8 @@ void application_setup()
     osci.tables_capacity = 256;
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
 
+    xTaskCreate(redraw_screen_task, "Screen Redraw", STACK_SIZE, NULL, 1, NULL);
+
     // xTaskCreatePinnedToCore(draw_text, "Draws texts", 1024, NULL, 1, NULL,
     // 0);
 }
@@ -120,15 +147,15 @@ void application_loop()
     }
 }
 
-void redraw_screen(uint16_t selected_cycle)
+void redraw_screen(uint16_t cycle_index)
 {
     display.fillScreen(SSD1351_BLACK);
 #if 1
 
-    wave_table_draw(&osci.tables[selected_cycle], osci.samples_per_cycle);
+    wave_table_draw(&osci.tables[cycle_index], osci.samples_per_cycle);
 
     display.setCursor(0, 40 + (SCREEN_HEIGHT / 2));
-    display.printf("Position: %u\n", selected_cycle);
+    display.printf("Position: %u\n", cycle_index);
 #endif
 
     // display.setCursor(0, 0);
@@ -282,6 +309,11 @@ uint16_t get_last_analog_average(uint16_t* values)
     return (uint16_t)(sum / LAST_ANALOG_VALUES_SIZE);
 }
 
+uint16_t min(uint16_t first, uint16_t second)
+{
+    return first < second ? first : second;
+}
+
 void wavetable_oscillation()
 {
     if (osci.total_cycles == 0 || osci.tables[0].samples == NULL)
@@ -289,15 +321,14 @@ void wavetable_oscillation()
         return;
     }
 
-    uint32_t wavetable_size = osci.samples_per_cycle;
+    uint64_t wavetable_size = osci.samples_per_cycle;
 
     uint16_t pitch_analog_value = analogRead(PIN_PITCH_INPUT);
     last_analog_pitch_values[analog_pitch_index] = pitch_analog_value;
     analog_pitch_index =
         plus_one_wrap(analog_pitch_index, LAST_ANALOG_VALUES_SIZE);
 
-    pitch_analog_value =
-        get_last_analog_average(last_analog_pitch_values);
+    pitch_analog_value = get_last_analog_average(last_analog_pitch_values);
     uint16_t frequency = analog_input_to_pitch(pitch_analog_value);
 
     uint16_t selected_cycle_analog_value = analogRead(PIN_WAVETABLE_POSITION);
@@ -314,10 +345,22 @@ void wavetable_oscillation()
         (selected_cycle_analog_value * osci.total_cycles) / MAX_12BIT_VALUE;
     // uint16_t selected_cycle = display_wave_index;
 
+    frequency = min(frequency, SAMPLE_RATE / 2);
     osci.phase_increment =
-        ((uint64_t)frequency * wavetable_size << 32) / SAMPLE_RATE;
+        (((uint64_t)frequency * wavetable_size) << 32) / SAMPLE_RATE;
 
     uint64_t current_time = micros();
+
+#if 0
+    if (millis() >= timer)
+    {
+        display.fillScreen(SSD1351_BLACK);
+        display.setCursor(10, 10);
+        display.printf("analog: %u\n", pitch_analog_value);
+        display.printf("Fre: %u\n", (uint32_t)frequency);
+        timer = millis() + 100;
+    }
+#endif
 
     uint64_t difference = current_time - next_sample_time;
     if (difference >= 0)
@@ -326,23 +369,13 @@ void wavetable_oscillation()
         {
             selected_cycle = osci.total_cycles - 1;
         }
+        g_selected_cycle = selected_cycle;
+
         if (selected_cycle != last_selected_cycle)
         {
-            //redraw_screen(selected_cycle);
+            // redraw_screen(selected_cycle);
             last_selected_cycle = selected_cycle;
         }
-
-#if 0
-        if (millis() >= timer)
-        {
-            display.fillScreen(SSD1351_BLACK);
-            display.setCursor(10, 10);
-            //display.printf("Position: %u\n", selected_cycle_analog_value);
-            //display.printf("Pitch: %u\n", pitch_analog_value);
-            //display.printf("Selected: %u\n", selected_cycle);
-            timer = millis() + 100;
-        }
-#endif
 
         uint16_t value = wave_table_linear_interpolation(
             osci.tables + selected_cycle, osci.samples_per_cycle, osci.phase);
