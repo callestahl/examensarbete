@@ -114,19 +114,6 @@ public class App extends Application {
                 success = true;
                 sendButton.setDisable(false);  
                 wavFileProcessor.readWaveFile(currentFile);
-
-                /* 
-                HBox hBox = new HBox();
-                hBox.getChildren().add(getLineChart(wavFileProcessor.shiftAvgDifference, 0));
-                hBox.getChildren().add(getLineChart(wavFileProcessor.normalizedBuffer, 151));
-                hBox.getChildren().add(getLineChart(wavFileProcessor.normalizedBuffer, (151 * 2)));
-                hBox.getChildren().add(getLineChart(wavFileProcessor.normalizedBuffer, (151 * 3)));
-                hBox.getChildren().add(getLineChart(wavFileProcessor.normalizedBuffer, (151 * 4)));
-                hBox.getChildren().add(getLineChart(wavFileProcessor.normalizedBuffer, (151 * 5)));
-                hBox.getChildren().add(getLineChart(wavFileProcessor.normalizedBuffer, (151 * 6)));
-                hBox.getChildren().add(getLineChart(wavFileProcessor.normalizedBuffer, (151 * 7)));
-                values.getChildren().add(hBox);
-                */
             }
             event.setDropCompleted(success);
             event.consume();
