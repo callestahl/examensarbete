@@ -291,7 +291,7 @@ uint16_t last_selected_cycle = MAX_16BIT_VALUE;
 
 uint64_t timer = millis();
 
-const uint8_t LAST_ANALOG_VALUES_SIZE = 20;
+const uint8_t LAST_ANALOG_VALUES_SIZE = 50;
 
 uint16_t analog_pitch_index = 0;
 uint16_t last_analog_pitch_values[LAST_ANALOG_VALUES_SIZE] = { 0 };
