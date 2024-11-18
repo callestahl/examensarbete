@@ -2,11 +2,16 @@
 #include <Adafruit_SSD1351.h>
 #include <SPI.h>
 
+#define USE_SPP
+
 #include "MCP_DAC.h"
 
-#include "BluetoothSerial.h"
 #include "wave_table.h"
+#ifdef USE_SPP
 #include "spp.h"
+#else
+#include "ble.h"
+#endif
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128
@@ -36,6 +41,7 @@
 
 #define STACK_SIZE 2048
 #define QUEUE_LENGTH 10
+
 
 struct Button
 {
@@ -103,8 +109,8 @@ void application_setup()
 {
     Serial.begin(115200);
 
-    // pinMode(button_pin0, INPUT);
-    // pinMode(button_pin1, INPUT);
+    pinMode(button_pin0, INPUT);
+    pinMode(button_pin1, INPUT);
 
     pinMode(PIN_PITCH_INPUT, INPUT);
     pinMode(PIN_WAVETABLE_POSITION, INPUT);
@@ -122,7 +128,11 @@ void application_setup()
 
     next_sample_time = micros();
 
+#ifdef USE_SPP
     spp_setup("WaveTablePP");
+#else
+    ble_setup(&display); 
+#endif
 
     osci.tables_capacity = 256;
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
@@ -135,12 +145,20 @@ void application_setup()
 
 void application_loop()
 {
-    if (spp_look_for_incoming_messages(&osci))
+#ifdef USE_SPP
+    if (spp_look_for_incoming_messages(&osci, &display))
     {
         display_wave_index = 0;
         redraw_screen(0);
     }
-    // process_buttons();
+#else
+    if(ble_copy_transfer(&osci))
+    {
+        display_wave_index = 0;
+        redraw_screen(0);
+    }
+#endif 
+    process_buttons();
     if (osci.total_cycles > 0)
     {
         wavetable_oscillation();
@@ -323,6 +341,7 @@ void wavetable_oscillation()
 
     uint64_t wavetable_size = osci.samples_per_cycle;
 
+#if 0
     uint16_t pitch_analog_value = analogRead(PIN_PITCH_INPUT);
     last_analog_pitch_values[analog_pitch_index] = pitch_analog_value;
     analog_pitch_index =
@@ -330,7 +349,11 @@ void wavetable_oscillation()
 
     pitch_analog_value = get_last_analog_average(last_analog_pitch_values);
     uint16_t frequency = analog_input_to_pitch(pitch_analog_value);
+#else
+    uint16_t frequency = analog_input_to_pitch(1000);
+#endif
 
+#if 0
     uint16_t selected_cycle_analog_value = analogRead(PIN_WAVETABLE_POSITION);
 
     last_analog_position_values[analog_position_index] =
@@ -343,7 +366,9 @@ void wavetable_oscillation()
 
     uint16_t selected_cycle =
         (selected_cycle_analog_value * osci.total_cycles) / MAX_12BIT_VALUE;
-    // uint16_t selected_cycle = display_wave_index;
+#else
+    uint16_t selected_cycle = display_wave_index;
+#endif
 
     frequency = min(frequency, SAMPLE_RATE / 2);
     osci.phase_increment =

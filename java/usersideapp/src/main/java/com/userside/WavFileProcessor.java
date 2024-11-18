@@ -2,6 +2,7 @@ package com.userside;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -21,10 +22,10 @@ public class WavFileProcessor {
         int index = file.getName().lastIndexOf('.');
         String currentFileExtension =  file.getName().substring(index + 1);
         if(currentFileExtension.equalsIgnoreCase("wav")) {
-            try {
-                AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(file);
-
-                ByteArrayOutputStream bufferStream = new ByteArrayOutputStream();
+            try (AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(file);
+                ByteArrayOutputStream bufferStream = new ByteArrayOutputStream(); 
+                FileOutputStream outputStream = new FileOutputStream("processedAudio.txt");) {
+           
                 byte[] tempBuffer = new byte[4096];
                 int bytesRead = 0;
                 while ((bytesRead = audioInputStream.read(tempBuffer)) != -1) {
@@ -62,26 +63,64 @@ public class WavFileProcessor {
                 ArrayList<Integer> smallestIndex = find_local_minima(smooth);
                 cycleSampleCount = calculate_samples_per_cycle(smallestIndex);
 
-                convertedBuffer = new byte[normalizedBuffer.length * 2];
+                long bufferBytes = (normalizedBuffer.length * 2) + 14;
+
+                int id0 = 29960;
+                int id1 = 62903;
+                int id2 = 35185;
+                int id3 = 26662;
+
+                byte cycleSampleCountLow = low(cycleSampleCount);
+                byte cycleSampleCountHigh = high(cycleSampleCount); 
+
+                byte bufferBytesHigh0 = (byte) ((bufferBytes >> 24) & 0xFF);
+                byte bufferBytesHigh1 = (byte) ((bufferBytes >> 16) & 0xFF);
+                byte bufferBytesLow0 = (byte) ((bufferBytes >> 8) & 0xFF);
+                byte bufferBytesLow1 = (byte) ((bufferBytes) & 0xFF);
+
+                byte[] header = { 
+                    high(id0), low(id0), high(id1), low(id1), 
+                    high(id2), low(id2), high(id3), low(id3), 
+                    cycleSampleCountHigh, cycleSampleCountLow, bufferBytesHigh0, 
+                    bufferBytesHigh1, bufferBytesLow0, bufferBytesLow1
+                };
+                convertedBuffer = new byte[(int)bufferBytes];
+
+                for(int i = 0; i < header.length; ++i) {
+                    convertedBuffer[i] = header[i];
+                }
+                int convertedIndex = header.length;
                 for (int i = 0; i < normalizedBuffer.length; i++) {
                     int convertedValue = (int) ((normalizedBuffer[i] + 1.0f) * 32767.5f);
 
                     byte lowerByte = (byte) (convertedValue & 0xFF);    
                     byte higherByte = (byte) ((convertedValue >> 8) & 0xFF);
-                    convertedBuffer[2 * i] = higherByte;
-                    convertedBuffer[2 * i + 1] = lowerByte;
+                    convertedBuffer[convertedIndex++] = higherByte;
+                    convertedBuffer[convertedIndex++] = lowerByte;
                 }
 
-                audioInputStream.close();
-                bufferStream.close();
+                byte[] audioBufferWithSampleCount = new byte[convertedBuffer.length + 2];
+                audioBufferWithSampleCount[0] = high(cycleSampleCount);
+                audioBufferWithSampleCount[1] = low(cycleSampleCount);
+                for(int i = 0; i < convertedBuffer.length; ++i) {
+                    audioBufferWithSampleCount[i + 2] = convertedBuffer[i];
+                }
+                outputStream.write(audioBufferWithSampleCount);
             } catch(Exception e) {
                 e.printStackTrace();
             }
         }
     }
 
+    private byte low(int value) {
+        return (byte) (value & 0xFF);
+    }
+
+    private byte high(int value) {
+        return (byte) ((value >> 8) & 0xFF);
+    }
+
     private static ArrayList<Integer> find_local_minima(float[] smooth) {
-        int lastIndex = 0;
         int scanCount = smooth.length / 10;
         ArrayList<Integer> smallestIndex = new ArrayList<>();
         for(int j = 0; j < smooth.length; ++j) {
@@ -104,8 +143,6 @@ public class WavFileProcessor {
             }
             if(!jump) {
                 smallestIndex.add(j);
-                System.out.println(j - lastIndex);
-                lastIndex = j;
             }
         }
         return smallestIndex;

@@ -37,6 +37,7 @@ void wave_table_oscilator_clean(WaveTableOscillator* oscilator)
             if (oscilator->tables[i].samples != NULL)
             {
                 free(oscilator->tables[i].samples);
+                oscilator->tables[i].samples = NULL;
             }
         }
     }

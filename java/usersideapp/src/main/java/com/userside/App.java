@@ -291,24 +291,14 @@ public class App extends Application {
         OutputStream outStream = connection.openOutputStream();
         InputStream inputStream = connection.openInputStream()
     ) {
+        System.out.println("Connected");
         // NOTE(Linus): Tries to send the file multiple times before giving up
-        for(int tries = 0; tries < 5; ++tries) {
-            int id0 = 29960;
-            int id1 = 62903;
-            int id2 = 35185;
-            int id3 = 26662;
-
-            System.out.println(wavFileProcessor.cycleSampleCount);
-            byte cycleSampleCountLow = low(wavFileProcessor.cycleSampleCount);
-            byte cycleSampleCountHigh = high(wavFileProcessor.cycleSampleCount); 
-            byte[] header = { high(id0), low(id0), high(id1), low(id1), high(id2), low(id2), high(id3), low(id3), cycleSampleCountHigh, cycleSampleCountLow };
-            
-            outStream.write(header, 0, header.length);
+        for(int tries = 0; tries < 1; ++tries) {
+            long startTime = System.nanoTime();
 
             boolean error = false;
-            error = !wait_for_respons(inputStream, 0x08, 0x10);
-        
-            int cyclesToSend = Math.min(128, wavFileProcessor.normalizedBuffer.length / wavFileProcessor.cycleSampleCount);
+            /*
+            int cyclesToSend = Math.min(256, wavFileProcessor.normalizedBuffer.length / wavFileProcessor.cycleSampleCount);
             int bytesPerCycle = wavFileProcessor.cycleSampleCount * 2;
             for (int i = 0; i < cyclesToSend && !error; i++) {
                 int offset = i * bytesPerCycle;
@@ -324,9 +314,24 @@ public class App extends Application {
                     cycle_plus_key[j + 3] = low_byte;
                 }
                 outStream.write(cycle_plus_key, 0, cycle_plus_key.length);
+                outStream.write(wavFileProcessor.convertedBuffer, offset, bytesPerCycle);
                 error = !wait_for_respons(inputStream, 0x08, 0x10);
             }
-            outStream.flush();
+            */
+            int totalBytesToSend = wavFileProcessor.convertedBuffer.length;
+            int chunkSize = 8192;
+            int chunks = totalBytesToSend / chunkSize;
+            int i = 0;
+            for (; i < chunks && !error; i++) {
+                int offset = i * chunkSize;
+                outStream.write(wavFileProcessor.convertedBuffer, offset, chunkSize);
+                error = !wait_for_respons(inputStream, 0x08, 0x10);
+            }
+            int offset = i * chunkSize;
+            int remainder = wavFileProcessor.convertedBuffer.length - offset;
+            if(!error && remainder > 0) {
+                outStream.write(wavFileProcessor.convertedBuffer, offset, remainder);
+            }
             if(error) {
                 System.out.println("Error sending file");
             } else {
@@ -334,6 +339,8 @@ public class App extends Application {
                 if(!wait_for_respons(inputStream, 0x06, 0x10)) {
                     System.out.println("Error sending file");
                 } else {
+                    System.out.println((System.nanoTime() - startTime) / 1_000_000.0);
+                    //outStream.flush();
                     break;
                 }
             }

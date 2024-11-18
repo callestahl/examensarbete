@@ -1,12 +1,10 @@
 #ifndef BLE_H
 #define BLE_H
 #include <stdint.h>
-#include <BLEDevice.h>
-#include <BLEServer.h>
-#include <BLEUtils.h>
+#include "wave_table.h"
 
-void ble_setup(void);
-String ble_get_data(void);
+void ble_setup(void* display);
 bool ble_device_is_connected(void);
+bool ble_copy_transfer(WaveTableOscillator* oscilator);
 
 #endif

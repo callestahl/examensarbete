@@ -39,6 +39,8 @@ class BLEApp:
         )
         self.send_button.place(relx=0.5, rely=0.6, anchor="center")
 
+        self.sound_buffer = self.file_to_buffer("../processedAudio.txt")
+
         root.drop_target_register(DND_FILES)
         root.dnd_bind("<<Drop>>", self.on_drag_dropped)
 
@@ -52,6 +54,16 @@ class BLEApp:
             self.send_button.config(state="normal")
         else:
             self.drop_label.config(text="Invalid file dropped")
+
+    def file_to_buffer(self, file_path):
+        try:
+            with open(file_path, 'rb') as file:
+                file_content = bytearray(file.read())
+            return file_content 
+        except FileNotFoundError:
+            print(f"Error: File not found at path: {file_path}")
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
     def start_discovery(self):
         print("Looking for devices...")
@@ -80,22 +92,46 @@ class BLEApp:
     def start_sending_file(self):
         asyncio.run(self.send_file())
 
+
     async def send_file(self):
         try:
             async with BleakClient(self.device_address) as client:
-                mtu_size = await client.get_mtu()
-                chunk_size = mtu_size - 3  # Subtract 3 bytes for ATT header
-                print(f"MTU Size: {mtu_size}, Chunk Size: {chunk_size}")
+                mtu_size = client.mtu_size
+                chunk_size = min(mtu_size - 3, 512) # -3 ATT header, 512 max Bluetooth spec p. 1485
+                print(f"Chunk Size: {chunk_size}")
 
-                data = "Hello"
                 characteristic_uuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-                await client.write_gatt_char(characteristic_uuid, data.encode('utf-8'))
-                print("File transferred successfully!")
+                sound_buffer_len = len(self.sound_buffer);
+                if sound_buffer_len % 2 != 0:
+                    print("Error: Sound file are not even");
+                    return;
 
-                #with open(self.current_file, "rb") as file:
-                #    while chunk := file.read(chunk_size):
-                #        await client.write_gatt_char(characteristic_uuid, chunk)
-                #        print(f"Sent chunk of size {len(chunk)}")
+                chunks = sound_buffer_len // chunk_size;
+                remainder = sound_buffer_len % chunk_size;
+
+                for i in range(chunks):
+                    offset = chunk_size * i
+                    await client.write_gatt_char(
+                        characteristic_uuid,
+                        self.sound_buffer[offset:offset + chunk_size],
+                        response=True 
+                    )
+
+                if remainder > 0:
+                    await client.write_gatt_char(
+                        characteristic_uuid,
+                        self.sound_buffer[chunks * chunk_size:],
+                        response=True
+                    )
+
+                done_message = "DONE"
+                await client.write_gatt_char(
+                        characteristic_uuid,
+                        done_message.encode('utf-8')
+                )
+
+
+                print("File transferred successfully!")
 
         except Exception as e:
             print(f"Failed to send file: {e}")

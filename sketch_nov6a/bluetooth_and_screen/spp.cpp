@@ -1,7 +1,10 @@
 #include "spp.h"
 #include "define.h"
+#include "bluetooth.h"
 
 #include "BluetoothSerial.h"
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1351.h>
 
 #define BLUETOOTH_FINISHED_CODE 0x06
 #define BLUETOOTH_ACKNOWLEDGE_CODE 0x08
@@ -14,72 +17,75 @@ struct BluetoothHeader
     uint16_t id2;
     uint16_t id3;
     uint16_t cycle_sample_count;
+    uint16_t total_bytes_to_receive_high;
+    uint16_t total_bytes_to_receive_low;
 };
 
 struct SPP
 {
-    BluetoothSerial bs;
-    
-    int32_t table_index;
-    int32_t sample_index;
+    BluetoothSerial bluetooth_serial;
+    Bluetooth bluetooth;
 
     bool initialized;
-    bool header_read;
-    bool reading_samples;
-
+    uint32_t bytes_received;
+    uint32_t bytes_to_received;
     uint64_t time_to_reset;
     uint64_t time_before_reset;
 };
 
 global WaveTableOscillator g_temp_osci = { 0 };
 global SPP g_spp;
+global uint32_t g_chunk_bytes = 0;
 
 internal void spp_clear_buffer()
 {
-    while (g_spp.bs.available())
+    while (g_spp.bluetooth_serial.available())
     {
-        g_spp.bs.read();
+        g_spp.bluetooth_serial.read();
     }
-}
-
-internal void spp_reset()
-{
-    g_spp.reading_samples = false;
-    g_spp.header_read = false;
-    g_spp.table_index = 0;
-    g_spp.sample_index = 0;
 }
 
 internal bool spp_has_timed_out(uint64_t start_time, uint64_t time_to_timeout)
 {
     if ((millis() - start_time) > time_to_timeout)
     {
-        spp_reset();
+        g_chunk_bytes = 0;
+        g_spp.bytes_received = 0;
+        g_spp.bytes_to_received = 0;
+        bluetooth_reset(&g_spp.bluetooth);
         spp_clear_buffer();
         wave_table_oscilator_clean(&g_temp_osci);
-        g_spp.bs.write(BLUETOOTH_ERROR_CODE);
+        g_spp.bluetooth_serial.write(BLUETOOTH_ERROR_CODE);
         return true;
     }
     return false;
 }
 
+
 internal uint16_t spp_get_uint16()
 {
-    uint8_t high = g_spp.bs.read();
-    uint8_t low = g_spp.bs.read();
+    g_chunk_bytes += 2;
+    g_spp.bytes_received += 2;
+    uint8_t high = g_spp.bluetooth_serial.read();
+    uint8_t low = g_spp.bluetooth_serial.read();
     return ((uint16_t)high << 8) | ((uint16_t)low);
 }
 
 internal void spp_revert_transaction()
 {
-    spp_reset();
+    g_chunk_bytes = 0;
+    g_spp.bytes_received = 0;
+    g_spp.bytes_to_received = 0;
+    bluetooth_reset(&g_spp.bluetooth);
     spp_clear_buffer();
     wave_table_oscilator_clean(&g_temp_osci);
-    g_spp.bs.write(BLUETOOTH_ERROR_CODE);
+    g_spp.bluetooth_serial.write(BLUETOOTH_ERROR_CODE);
 }
 
 internal bool spp_read_header()
 {
+    g_chunk_bytes = 0;
+    g_spp.bytes_received = 0;
     uint16_t id0 = spp_get_uint16();
     uint16_t id1 = spp_get_uint16();
     uint16_t id2 = spp_get_uint16();
@@ -89,10 +95,16 @@ internal bool spp_read_header()
         uint16_t cycle_sample_count = spp_get_uint16();
         g_temp_osci.samples_per_cycle = cycle_sample_count;
         g_temp_osci.total_cycles = 0;
-        g_spp.header_read = true;
-        g_spp.table_index = 0;
-        g_spp.sample_index = 0;
-        g_spp.bs.write(BLUETOOTH_ACKNOWLEDGE_CODE);
+        g_spp.bluetooth.header_read = true;
+        g_spp.bluetooth.table_index = 0;
+        g_spp.bluetooth.sample_index = 0;
+
+        uint16_t bytes_to_received_high = spp_get_uint16();
+        uint16_t bytes_to_received_low = spp_get_uint16();
+        g_spp.bytes_to_received = ((uint32_t)bytes_to_received_high << 16) |
+                                  (uint32_t)bytes_to_received_low;
+
+        // g_spp.bluetooth_serial.write(BLUETOOTH_ACKNOWLEDGE_CODE);
     }
     else
     {
@@ -113,58 +125,37 @@ internal uint16_t spp_sample_key(uint16_t key)
     return key;
 }
 
-internal bool spp_process_sample()
-{
-    uint16_t key = spp_get_uint16();
-    uint16_t sample = spp_get_uint16();
-    if (key == spp_sample_key(sample))
-    {
-        if (g_spp.table_index < g_temp_osci.tables_capacity)
-        {
-            if (g_spp.sample_index == 0)
-            {
-                if (g_temp_osci.tables[g_spp.table_index].samples != NULL)
-                {
-                    free(g_temp_osci.tables[g_spp.table_index].samples);
-                }
-                g_temp_osci.tables[g_spp.table_index].samples = (uint16_t*)calloc(
-                    g_temp_osci.samples_per_cycle, sizeof(uint16_t));
-                if (g_temp_osci.tables[g_spp.table_index].samples != NULL)
-                {
-                    g_temp_osci.total_cycles++;
-                }
-                else
-                {
-                    // TODO(Linus): Logging
-                    spp_revert_transaction();
-                    return false;
-                }
-            }
-            g_temp_osci.tables[g_spp.table_index].samples[g_spp.sample_index++] =
-                sample;
-            if (g_spp.sample_index == g_temp_osci.samples_per_cycle)
-            {
-                g_spp.sample_index = 0;
-                g_spp.table_index++;
+global uint32_t te = 0;
 
-                g_spp.bs.write(BLUETOOTH_ACKNOWLEDGE_CODE);
-            }
-        }
-    }
-    else
+internal bool spp_process_sample(void* display)
+{
+    // uint16_t key = spp_get_uint16();
+    uint16_t sample = spp_get_uint16();
+    // if (key == spp_sample_key(sample))
     {
-        spp_revert_transaction();
-        return false;
+        BluetoothSampleProcessCode code =
+            bluetooth_process_sample(&g_spp.bluetooth, sample, &g_temp_osci);
+        if (code == SAMPLE_PROCESS_ERROR)
+        {
+            return false;
+        }
+        // else if (code == SAMPLE_PROCESS_CYCLE_DONE)
+        else if (g_chunk_bytes == 8192)
+        {
+            g_spp.bluetooth_serial.write(BLUETOOTH_ACKNOWLEDGE_CODE);
+            g_chunk_bytes = 0;
+        }
+        return true;
     }
-    return true;
+    // return false;
 }
 
 void spp_setup(const char* name)
 {
     if (!g_spp.initialized)
     {
-        g_spp.bs.begin(name);
-        g_spp.bs.enableSSP();
+        g_spp.bluetooth_serial.begin(name);
+        g_spp.bluetooth_serial.enableSSP();
         g_spp.initialized = true;
         g_spp.time_before_reset = 100;
         g_temp_osci.tables_capacity = 256;
@@ -177,17 +168,18 @@ void spp_setup(const char* name)
     }
 }
 
-bool spp_look_for_incoming_messages(WaveTableOscillator* oscilator)
+bool spp_look_for_incoming_messages(WaveTableOscillator* oscilator,
+                                    void* display)
 {
     const uint64_t start_time = millis();
     const uint64_t time_to_timeout = 500;
 
-    while (g_spp.bs.available() &&
+    while (g_spp.bluetooth_serial.available() &&
            !spp_has_timed_out(start_time, time_to_timeout))
     {
-        if (!g_spp.header_read)
+        if (!g_spp.bluetooth.header_read)
         {
-            if (g_spp.bs.available() >= sizeof(BluetoothHeader))
+            if (g_spp.bluetooth_serial.available() >= sizeof(BluetoothHeader))
             {
                 if (!spp_read_header())
                 {
@@ -197,33 +189,48 @@ bool spp_look_for_incoming_messages(WaveTableOscillator* oscilator)
         }
         else
         {
-            if (g_spp.bs.available() >= 4)
+            if (g_spp.bluetooth_serial.available() >= 2)
             {
-                if (!spp_process_sample())
+                if (!spp_process_sample(display))
                 {
+                    spp_revert_transaction();
                     break;
                 }
             }
-            g_spp.reading_samples = true;
+            g_spp.bluetooth.reading_samples = true;
         }
         g_spp.time_to_reset = millis() + g_spp.time_before_reset;
     }
 
-    if (g_spp.reading_samples)
+    if (g_spp.bluetooth.reading_samples)
     {
-        if (millis() >= g_spp.time_to_reset)
+        // if (millis() >= g_spp.time_to_reset)
+        if (g_spp.bytes_received == g_spp.bytes_to_received)
         {
-            spp_reset();
-            g_spp.bs.write(BLUETOOTH_FINISHED_CODE);
+            g_chunk_bytes = 0;
+            g_spp.bytes_received = 0;
+            g_spp.bytes_to_received = 0;
+            bluetooth_reset(&g_spp.bluetooth);
+            g_spp.bluetooth_serial.write(BLUETOOTH_FINISHED_CODE);
             if (g_temp_osci.total_cycles > 0)
             {
                 wave_table_oscilator_clean(oscilator);
-                WaveTable* temp = oscilator->tables;
+                WaveTableOscillator temp = *oscilator;
                 *oscilator = g_temp_osci;
-                g_temp_osci.tables = temp;
+                g_temp_osci = temp;
                 return true;
             }
         }
+#if 0
+        if (g_spp.bytes_received >= g_spp.bytes_to_received - 10)
+        {
+            ((Adafruit_SSD1351*)display)->fillScreen(0);
+            ((Adafruit_SSD1351*)display)->setCursor(0, 0);
+            ((Adafruit_SSD1351*)display)
+                ->printf("%u\n", g_spp.bytes_to_received);
+            ((Adafruit_SSD1351*)display)->printf("%u\n", g_spp.bytes_received);
+        }
+#endif
     }
     return false;
 }

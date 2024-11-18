@@ -1,5 +1,5 @@
 REM arduino-cli compile --fqbn esp32:esp32:esp32da .\sketch_nov6a\bluetooth_and_screen --build-path=build --only-compilation-database
-arduino-cli compile --fqbn esp32:esp32:esp32da .\sketch_nov6a\bluetooth_and_screen
+arduino-cli compile --build-property build.partitions=huge_app --fqbn esp32:esp32:esp32da .\sketch_nov6a\bluetooth_and_screen
 
 IF %errorlevel% EQU 0 (
     echo Build Completed Successfully 

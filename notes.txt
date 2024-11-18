@@ -1,0 +1,4 @@
+Bluetooth core spec 1485
+BluetoothSerial.cpp buffer size
+
+Graph buffersize in relation to time
