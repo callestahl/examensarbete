@@ -341,7 +341,7 @@ void wavetable_oscillation()
 
     uint64_t wavetable_size = osci.samples_per_cycle;
 
-#if 0
+#if 1
     uint16_t pitch_analog_value = analogRead(PIN_PITCH_INPUT);
     last_analog_pitch_values[analog_pitch_index] = pitch_analog_value;
     analog_pitch_index =
@@ -353,7 +353,7 @@ void wavetable_oscillation()
     uint16_t frequency = analog_input_to_pitch(1000);
 #endif
 
-#if 0
+#if 1
     uint16_t selected_cycle_analog_value = analogRead(PIN_WAVETABLE_POSITION);
 
     last_analog_position_values[analog_position_index] =
