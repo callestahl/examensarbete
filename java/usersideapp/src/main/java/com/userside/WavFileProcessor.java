@@ -99,13 +99,7 @@ public class WavFileProcessor {
                     convertedBuffer[convertedIndex++] = lowerByte;
                 }
 
-                byte[] audioBufferWithSampleCount = new byte[convertedBuffer.length + 2];
-                audioBufferWithSampleCount[0] = high(cycleSampleCount);
-                audioBufferWithSampleCount[1] = low(cycleSampleCount);
-                for(int i = 0; i < convertedBuffer.length; ++i) {
-                    audioBufferWithSampleCount[i + 2] = convertedBuffer[i];
-                }
-                outputStream.write(audioBufferWithSampleCount);
+                outputStream.write(convertedBuffer);
             } catch(Exception e) {
                 e.printStackTrace();
             }

@@ -35,6 +35,7 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+
 /* https://ants.inf.um.es/~felixgm/docencia/j2me/javadoc/jsr82/javax/bluetooth/UUID.html
  * SDP	                                0x0001	16-bit
  * RFCOMM	                            0x0003	16-bit
@@ -58,7 +59,6 @@ public class App extends Application {
 
     private static Scene scene;
     private File currentFile;
-    private String currentFileExtension;
     private RemoteDevice esp32Device;  
     private String connectionURL;     
     private WavFileProcessor wavFileProcessor = new WavFileProcessor();
@@ -287,66 +287,67 @@ public class App extends Application {
     }
 
     private void sendFile(StreamConnection connection) {
-    try (
-        OutputStream outStream = connection.openOutputStream();
-        InputStream inputStream = connection.openInputStream()
-    ) {
-        System.out.println("Connected");
-        // NOTE(Linus): Tries to send the file multiple times before giving up
-        for(int tries = 0; tries < 1; ++tries) {
-            long startTime = System.nanoTime();
+        try (
+            OutputStream outStream = connection.openOutputStream();
+            InputStream inputStream = connection.openInputStream()
+        ) {
+            System.out.println("Connected");
+            // NOTE(Linus): Tries to send the file multiple times before giving up
+            for(int tries = 0; tries < 1; ++tries) {
+                long startTime = System.nanoTime();
 
-            boolean error = false;
-            /*
-            int cyclesToSend = Math.min(256, wavFileProcessor.normalizedBuffer.length / wavFileProcessor.cycleSampleCount);
-            int bytesPerCycle = wavFileProcessor.cycleSampleCount * 2;
-            for (int i = 0; i < cyclesToSend && !error; i++) {
-                int offset = i * bytesPerCycle;
-                byte[] cycle_plus_key = new byte[bytesPerCycle * 2];
-                int h = offset;
-                for(int j = 0; j < cycle_plus_key.length; j += 4) {
-                    byte high_byte =  wavFileProcessor.convertedBuffer[h++];
-                    byte low_byte = wavFileProcessor.convertedBuffer[h++];
-                    int key = sample_key(((high_byte & 0xFF) << 8) | (low_byte & 0xFF));
-                    cycle_plus_key[j] = high(key);
-                    cycle_plus_key[j + 1] = low(key);
-                    cycle_plus_key[j + 2] = high_byte;
-                    cycle_plus_key[j + 3] = low_byte;
+                boolean error = false;
+                /*
+                int cyclesToSend = Math.min(256, wavFileProcessor.normalizedBuffer.length / wavFileProcessor.cycleSampleCount);
+                int bytesPerCycle = wavFileProcessor.cycleSampleCount * 2;
+                for (int i = 0; i < cyclesToSend && !error; i++) {
+                    int offset = i * bytesPerCycle;
+                    byte[] cycle_plus_key = new byte[bytesPerCycle * 2];
+                    int h = offset;
+                    for(int j = 0; j < cycle_plus_key.length; j += 4) {
+                        byte high_byte =  wavFileProcessor.convertedBuffer[h++];
+                        byte low_byte = wavFileProcessor.convertedBuffer[h++];
+                        int key = sample_key(((high_byte & 0xFF) << 8) | (low_byte & 0xFF));
+                        cycle_plus_key[j] = high(key);
+                        cycle_plus_key[j + 1] = low(key);
+                        cycle_plus_key[j + 2] = high_byte;
+                        cycle_plus_key[j + 3] = low_byte;
+                    }
+                    outStream.write(cycle_plus_key, 0, cycle_plus_key.length);
+                    outStream.write(wavFileProcessor.convertedBuffer, offset, bytesPerCycle);
+                    error = !wait_for_respons(inputStream, 0x08, 0x10);
                 }
-                outStream.write(cycle_plus_key, 0, cycle_plus_key.length);
-                outStream.write(wavFileProcessor.convertedBuffer, offset, bytesPerCycle);
-                error = !wait_for_respons(inputStream, 0x08, 0x10);
-            }
-            */
-            int totalBytesToSend = wavFileProcessor.convertedBuffer.length;
-            int chunkSize = 8192;
-            int chunks = totalBytesToSend / chunkSize;
-            int i = 0;
-            for (; i < chunks && !error; i++) {
+                */
+                int totalBytesToSend = wavFileProcessor.convertedBuffer.length;
+                int chunkSize = 4096;
+                int chunks = totalBytesToSend / chunkSize;
+                int i = 0;
+                for (; i < chunks && !error; i++) {
+                    int offset = i * chunkSize;
+                    outStream.write(wavFileProcessor.convertedBuffer, offset, chunkSize);
+                    error = !wait_for_respons(inputStream, 0x08, 0x10);
+                }
                 int offset = i * chunkSize;
-                outStream.write(wavFileProcessor.convertedBuffer, offset, chunkSize);
-                error = !wait_for_respons(inputStream, 0x08, 0x10);
-            }
-            int offset = i * chunkSize;
-            int remainder = wavFileProcessor.convertedBuffer.length - offset;
-            if(!error && remainder > 0) {
-                outStream.write(wavFileProcessor.convertedBuffer, offset, remainder);
-            }
-            if(error) {
-                System.out.println("Error sending file");
-            } else {
-                System.out.println("File sent");
-                if(!wait_for_respons(inputStream, 0x06, 0x10)) {
+                int remainder = wavFileProcessor.convertedBuffer.length - offset;
+                if(!error && remainder > 0) {
+                    outStream.write(wavFileProcessor.convertedBuffer, offset, remainder);
+                }
+                if(error) {
                     System.out.println("Error sending file");
                 } else {
-                    System.out.println((System.nanoTime() - startTime) / 1_000_000.0);
-                    //outStream.flush();
-                    break;
+                    System.out.println("File sent");
+                    if(!wait_for_respons(inputStream, 0x06, 0x10)) {
+                        System.out.println("Error sending file");
+                    } else {
+                        System.out.println((System.nanoTime() - startTime) / 1_000_000.0);
+                        //outStream.flush();
+                        break;
+                    }
                 }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-    } catch (Exception e) {
-        e.printStackTrace();
     }
-    }
+
 }

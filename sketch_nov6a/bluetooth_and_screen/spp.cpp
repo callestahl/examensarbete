@@ -140,7 +140,7 @@ internal bool spp_process_sample(void* display)
             return false;
         }
         // else if (code == SAMPLE_PROCESS_CYCLE_DONE)
-        else if (g_chunk_bytes == 8192)
+        else if (g_chunk_bytes == 4096)
         {
             g_spp.bluetooth_serial.write(BLUETOOTH_ACKNOWLEDGE_CODE);
             g_chunk_bytes = 0;
@@ -221,16 +221,6 @@ bool spp_look_for_incoming_messages(WaveTableOscillator* oscilator,
                 return true;
             }
         }
-#if 0
-        if (g_spp.bytes_received >= g_spp.bytes_to_received - 10)
-        {
-            ((Adafruit_SSD1351*)display)->fillScreen(0);
-            ((Adafruit_SSD1351*)display)->setCursor(0, 0);
-            ((Adafruit_SSD1351*)display)
-                ->printf("%u\n", g_spp.bytes_to_received);
-            ((Adafruit_SSD1351*)display)->printf("%u\n", g_spp.bytes_received);
-        }
-#endif
     }
     return false;
 }

@@ -134,10 +134,12 @@ void application_setup()
     ble_setup(&display); 
 #endif
 
+#if 0
     osci.tables_capacity = 256;
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
+#endif
 
-    xTaskCreate(redraw_screen_task, "Screen Redraw", STACK_SIZE, NULL, 1, NULL);
+    //xTaskCreate(redraw_screen_task, "Screen Redraw", STACK_SIZE, NULL, 1, NULL);
 
     // xTaskCreatePinnedToCore(draw_text, "Draws texts", 1024, NULL, 1, NULL,
     // 0);
@@ -155,13 +157,13 @@ void application_loop()
     if(ble_copy_transfer(&osci))
     {
         display_wave_index = 0;
-        redraw_screen(0);
+        //redraw_screen(0);
     }
 #endif 
     process_buttons();
     if (osci.total_cycles > 0)
     {
-        wavetable_oscillation();
+        //wavetable_oscillation();
     }
 }
 
