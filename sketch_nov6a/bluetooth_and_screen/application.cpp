@@ -139,7 +139,7 @@ void application_setup()
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
 #endif
 
-    //xTaskCreate(redraw_screen_task, "Screen Redraw", STACK_SIZE, NULL, 1, NULL);
+    xTaskCreate(redraw_screen_task, "Screen Redraw", STACK_SIZE, NULL, 1, NULL);
 
     // xTaskCreatePinnedToCore(draw_text, "Draws texts", 1024, NULL, 1, NULL,
     // 0);
@@ -157,13 +157,13 @@ void application_loop()
     if(ble_copy_transfer(&osci))
     {
         display_wave_index = 0;
-        //redraw_screen(0);
+        redraw_screen(0);
     }
 #endif 
     process_buttons();
     if (osci.total_cycles > 0)
     {
-        //wavetable_oscillation();
+        wavetable_oscillation();
     }
 }
 
@@ -343,7 +343,7 @@ void wavetable_oscillation()
 
     uint64_t wavetable_size = osci.samples_per_cycle;
 
-#if 1
+#if 0
     uint16_t pitch_analog_value = analogRead(PIN_PITCH_INPUT);
     last_analog_pitch_values[analog_pitch_index] = pitch_analog_value;
     analog_pitch_index =
@@ -355,7 +355,7 @@ void wavetable_oscillation()
     uint16_t frequency = analog_input_to_pitch(1000);
 #endif
 
-#if 1
+#if 0
     uint16_t selected_cycle_analog_value = analogRead(PIN_WAVETABLE_POSITION);
 
     last_analog_position_values[analog_position_index] =
@@ -407,7 +407,7 @@ void wavetable_oscillation()
         uint16_t value = wave_table_linear_interpolation(
             osci.tables + selected_cycle, osci.samples_per_cycle, osci.phase);
 
-        dac.write(value >> 4, 0);
+        //dac.write(value >> 4, 0);
 
         wave_table_oscilator_update_phase(&osci);
 

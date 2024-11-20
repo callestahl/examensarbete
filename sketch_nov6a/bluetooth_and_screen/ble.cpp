@@ -33,6 +33,7 @@ class MyServerCallbacks : public BLEServerCallbacks
     {
         bluetooth_reset(&g_bluetooth);
         g_device_connected = false;
+        g_bluetooth.reading_samples = false;
     }
 };
 
@@ -63,16 +64,12 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
             uint32_t i = 0;
             if (!g_bluetooth.header_read)
             {
+                i = 8;
                 uint16_t cycle_sample_count = ble_get_uint16(data, i);
                 g_temp_osci.samples_per_cycle = cycle_sample_count;
                 g_temp_osci.total_cycles = 0;
                 g_bluetooth.header_read = true;
-#if 0
-                g_display->fillScreen(0);
-                g_display->setCursor(0, 0);
-                g_display->printf("Cycle: %u\n", cycle_sample_count);
-#endif
-                i = 2;
+                i = 14;
             }
             for (; i < length; i += 2)
             {
@@ -121,7 +118,7 @@ bool ble_device_is_connected(void)
 
 bool ble_copy_transfer(WaveTableOscillator* oscilator)
 {
-    if (!g_bluetooth.reading_samples && g_temp_osci.total_cycles != 0)
+    if ((!g_bluetooth.reading_samples || !g_device_connected) && g_temp_osci.total_cycles != 0)
     {
         wave_table_oscilator_clean(oscilator);
         WaveTableOscillator temp = *oscilator;
