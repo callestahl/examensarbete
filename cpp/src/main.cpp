@@ -17,7 +17,7 @@
 
 #include "audio_processing.h"
 
-#define USE_SPP
+//#define USE_SPP
 
 void imgui_initialize(GLFWwindow* window)
 {

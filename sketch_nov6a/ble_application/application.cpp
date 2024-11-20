@@ -1,17 +1,12 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
-#include <SPI.h>
 
-#define USE_SPP
+#include <SPI.h>
 
 #include "MCP_DAC.h"
 
 #include "wave_table.h"
-#ifdef USE_SPP
-#include "spp.h"
-#else
 #include "ble.h"
-#endif
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128
@@ -41,7 +36,6 @@
 
 #define STACK_SIZE 2048
 #define QUEUE_LENGTH 10
-
 
 struct Button
 {
@@ -128,38 +122,21 @@ void application_setup()
 
     next_sample_time = micros();
 
-#ifdef USE_SPP
-    spp_setup("WaveTablePP");
-#else
-    ble_setup(&display); 
-#endif
+    ble_setup(&display);
 
-#if 0
     osci.tables_capacity = 256;
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
-#endif
 
     xTaskCreate(redraw_screen_task, "Screen Redraw", STACK_SIZE, NULL, 1, NULL);
-
-    // xTaskCreatePinnedToCore(draw_text, "Draws texts", 1024, NULL, 1, NULL,
-    // 0);
 }
 
 void application_loop()
 {
-#ifdef USE_SPP
-    if (spp_look_for_incoming_messages(&osci, &display))
+    if (ble_copy_transfer(&osci))
     {
         display_wave_index = 0;
         redraw_screen(0);
     }
-#else
-    if(ble_copy_transfer(&osci))
-    {
-        display_wave_index = 0;
-        redraw_screen(0);
-    }
-#endif 
     process_buttons();
     if (osci.total_cycles > 0)
     {
@@ -170,20 +147,11 @@ void application_loop()
 void redraw_screen(uint16_t cycle_index)
 {
     display.fillScreen(SSD1351_BLACK);
-#if 1
 
     wave_table_draw(&osci.tables[cycle_index], osci.samples_per_cycle);
 
     display.setCursor(0, 40 + (SCREEN_HEIGHT / 2));
     display.printf("Position: %u\n", cycle_index);
-#endif
-
-    // display.setCursor(0, 0);
-    // display.printf("Sample: %u\nIndex: %d\n",
-    // osci.tables[0].data[sample_viewer], sample_viewer);
-
-    // display.printf("   %s\n\n", osci.tables[display_wave_index].name);
-    // display.printf("   Table size: %u", osci.table_length);
 }
 
 const uint32_t screen_width_with_fraction = SCREEN_WIDTH << 16;
@@ -407,7 +375,7 @@ void wavetable_oscillation()
         uint16_t value = wave_table_linear_interpolation(
             osci.tables + selected_cycle, osci.samples_per_cycle, osci.phase);
 
-        //dac.write(value >> 4, 0);
+        // dac.write(value >> 4, 0);
 
         wave_table_oscilator_update_phase(&osci);
 
