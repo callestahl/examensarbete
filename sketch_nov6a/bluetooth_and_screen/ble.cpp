@@ -69,6 +69,7 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
                 g_temp_osci.samples_per_cycle = cycle_sample_count;
                 g_temp_osci.total_cycles = 0;
                 g_bluetooth.header_read = true;
+
                 i = 14;
             }
             for (; i < length; i += 2)

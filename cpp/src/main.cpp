@@ -347,8 +347,6 @@ void ble_find_device_address(uint64_t* address)
             std::wcout << L"Device Address: " << args.BluetoothAddress()
                        << std::endl;
 
-            // Stop scanning when a specific device is found (for example
-            // purposes) Replace with your device's advertised name or address.
             if (args.Advertisement().LocalName() == L"WaveTablePP")
             {
                 std::wcout << L"Target device found, stopping scan..."
