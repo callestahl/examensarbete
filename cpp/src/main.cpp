@@ -17,7 +17,7 @@
 
 #include "audio_processing.h"
 
-//#define USE_SPP
+#define USE_SPP
 
 void imgui_initialize(GLFWwindow* window)
 {
@@ -361,6 +361,7 @@ void ble_find_device_address(uint64_t* address)
 
 void ble_connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
 {
+    printf("Connecting\n");
     auto device =
         BluetoothLEDevice::FromBluetoothAddressAsync(device_address).get();
     auto service_result = device.GetGattServicesAsync().get();
@@ -396,6 +397,7 @@ void ble_connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
         }
     }
 
+    printf("Sending\n");
     uint32_t chunk_size = 512;
     uint32_t chunks = buffer.size / chunk_size;
     uint32_t remainder = buffer.size % chunk_size;
@@ -420,6 +422,7 @@ void ble_connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
         auto writeResult =
             target_characteristic.WriteValueAsync(write_buffer).get();
     }
+    printf("Done\n");
 
     device.Close();
 }

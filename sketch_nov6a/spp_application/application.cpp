@@ -33,9 +33,8 @@
 #define SSD1351_GREEN RGB565(0, 63, 0)
 #define SSD1351_BLUE RGB565(0, 0, 31)
 
-#define STACK_SIZE 2048
-#define QUEUE_LENGTH 10
-
+#define STACK_SIZE 4096
+#define SPP_QUEUE_SIZE 4096
 
 struct Button
 {
@@ -76,24 +75,36 @@ uint64_t button_repeat_reset = 0;
 
 uint64_t sample_period_us = 1000000 / SAMPLE_RATE;
 uint64_t next_sample_time;
-
-QueueHandle_t cycle_queue;
+static SemaphoreHandle_t g_oscillator_mutex = NULL;
 
 volatile uint16_t g_selected_cycle = 0;
+static TaskHandle_t g_redraw_screen_task_handle = NULL;
 
 void redraw_screen_task(void* data)
 {
-    uint16_t last_drawn_cycle = MAX_16BIT_VALUE;
     while (true)
     {
-        vTaskDelay(pdMS_TO_TICKS(100));
-
-        if (g_selected_cycle != last_drawn_cycle)
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        if (osci.total_cycles > 0)
         {
-            last_drawn_cycle = g_selected_cycle;
-            if (osci.total_cycles > 0)
+            redraw_screen(g_selected_cycle);
+        }
+    }
+}
+
+static TaskHandle_t g_spp_task_handle = NULL;
+
+void spp_task(void* data)
+{
+    while (true)
+    {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        if (spp_look_for_incoming_messages(&osci, g_oscillator_mutex))
+        {
+            display_wave_index = 0;
+            if (g_redraw_screen_task_handle != NULL)
             {
-                redraw_screen(last_drawn_cycle);
+                xTaskNotifyGive(g_redraw_screen_task_handle);
             }
         }
     }
@@ -119,29 +130,33 @@ void application_setup()
     display.setTextColor(SSD1351_WHITE);
     display.setTextSize(1);
     display.println("Hello1");
+    display.println("Hello2");
 
     next_sample_time = micros();
 
-    spp_setup("WaveTablePP");
+    g_oscillator_mutex = xSemaphoreCreateMutex();
+
+    spp_setup("WaveTablePP", &g_spp_task_handle, SPP_QUEUE_SIZE);
 
     osci.tables_capacity = 256;
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
 
-    xTaskCreate(redraw_screen_task, "Screen Redraw", STACK_SIZE, NULL, 1, NULL);
-
+    xTaskCreatePinnedToCore(redraw_screen_task, "Screen Redraw", STACK_SIZE,
+                            NULL, 1, &g_redraw_screen_task_handle, 0);
+    xTaskCreatePinnedToCore(spp_task, "SPP messages", STACK_SIZE, NULL, 1,
+                            &g_spp_task_handle, 0);
 }
 
 void application_loop()
 {
-    if (spp_look_for_incoming_messages(&osci, &display))
-    {
-        display_wave_index = 0;
-        redraw_screen(0);
-    }
     process_buttons();
     if (osci.total_cycles > 0)
     {
-        wavetable_oscillation();
+        if (xSemaphoreTake(g_oscillator_mutex, portMAX_DELAY))
+        {
+            wavetable_oscillation();
+            xSemaphoreGive(g_oscillator_mutex);
+        }
     }
 }
 
@@ -149,11 +164,14 @@ void redraw_screen(uint16_t cycle_index)
 {
     display.fillScreen(SSD1351_BLACK);
 
-    wave_table_draw(&osci.tables[cycle_index], osci.samples_per_cycle);
+    if (xSemaphoreTake(g_oscillator_mutex, portMAX_DELAY))
+    {
+        wave_table_draw(&osci.tables[cycle_index], osci.samples_per_cycle);
+        xSemaphoreGive(g_oscillator_mutex);
+    }
 
     display.setCursor(0, 40 + (SCREEN_HEIGHT / 2));
     display.printf("Position: %u\n", cycle_index);
-
 }
 
 const uint32_t screen_width_with_fraction = SCREEN_WIDTH << 16;
@@ -370,14 +388,17 @@ void wavetable_oscillation()
 
         if (selected_cycle != last_selected_cycle)
         {
-            // redraw_screen(selected_cycle);
+            if (g_redraw_screen_task_handle != NULL)
+            {
+                xTaskNotifyGive(g_redraw_screen_task_handle);
+            }
             last_selected_cycle = selected_cycle;
         }
 
         uint16_t value = wave_table_linear_interpolation(
             osci.tables + selected_cycle, osci.samples_per_cycle, osci.phase);
 
-        //dac.write(value >> 4, 0);
+        // dac.write(value >> 4, 0);
 
         wave_table_oscilator_update_phase(&osci);
 
