@@ -386,6 +386,9 @@ void wavetable_oscillation()
 #if 1
     uint16_t selected_cycle_analog_value = analogRead(PIN_WAVETABLE_POSITION);
 
+    uint16_t last_selected_cycle_analog_value =
+        get_last_analog_average(last_analog_position_values);
+
     last_analog_position_values[analog_position_index] =
         selected_cycle_analog_value;
     analog_position_index =
@@ -395,11 +398,9 @@ void wavetable_oscillation()
         get_last_analog_average(last_analog_position_values);
 
 #if 0
-    uint16_t selected_cycle = get_cycle_from_analog(
-        (int32_t)last_analog_position_values[minus_one_wrap(
-            analog_position_index, LAST_ANALOG_VALUES_SIZE)],
-        (int32_t)last_analog_position_values[analog_position_index],
-        osci.total_cycles);
+    uint16_t selected_cycle =
+        get_cycle_from_analog(last_selected_cycle_analog_value,
+                              selected_cycle_analog_value, osci.total_cycles);
 #else
 
     uint16_t selected_cycle =

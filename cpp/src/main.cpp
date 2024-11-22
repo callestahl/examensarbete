@@ -117,7 +117,7 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
 
 #ifdef USE_SPP
 
-#define TARGET_DEVICE_NAME L"WaveTablePP_2"
+#define TARGET_DEVICE_NAME L"WaveTablePP"
 
 bool wait_for_respons(SOCKET socket, uint8_t value)
 {
