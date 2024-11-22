@@ -143,7 +143,7 @@ void application_setup()
     g_oscillator_mutex = xSemaphoreCreateMutex();
     g_oscillator_screen_mutex = xSemaphoreCreateMutex();
 
-    spp_setup("WaveTablePP_2", &g_spp_task_handle, SPP_QUEUE_SIZE);
+    spp_setup("WaveTablePP", &g_spp_task_handle, SPP_QUEUE_SIZE);
 
     osci.tables_capacity = 256;
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
@@ -167,6 +167,8 @@ void application_loop()
     }
 }
 
+uint16_t g_analog_value = 0;
+
 void redraw_screen(uint16_t cycle_index)
 {
     display.fillScreen(SSD1351_BLACK);
@@ -175,6 +177,7 @@ void redraw_screen(uint16_t cycle_index)
 
     display.setCursor(0, 40 + (SCREEN_HEIGHT / 2));
     display.printf("Position: %u\n", cycle_index);
+    display.printf("Analog: %u\n", g_analog_value);
 }
 
 const uint32_t screen_width_with_fraction = SCREEN_WIDTH << 16;
@@ -256,12 +259,14 @@ void process_buttons()
             (!button0.button_pressed &&
              ((millis() - button0.last_debounce_time) > debounce_delay)))
         {
-            display_wave_index =
-                plus_one_wrap(display_wave_index, osci.total_cycles);
+            // display_wave_index =
+            // plus_one_wrap(display_wave_index, osci.total_cycles);
+            g_analog_value += 5;
 
             button0.button_pressed = true;
             button0.last_debounce_time = millis();
             button_repeat_reset = millis() + 200;
+            xTaskNotifyGive(g_redraw_screen_task_handle);
         }
     }
     else
@@ -280,11 +285,14 @@ void process_buttons()
         if (!button1.button_pressed &&
             ((millis() - button1.last_debounce_time) > debounce_delay))
         {
-            display_wave_index =
-                minus_one_wrap(display_wave_index, osci.total_cycles);
+            // display_wave_index =
+            // minus_one_wrap(display_wave_index, osci.total_cycles);
+
+            g_analog_value -= 5;
 
             button1.button_pressed = true;
             button1.last_debounce_time = millis();
+            xTaskNotifyGive(g_redraw_screen_task_handle);
         }
     }
     else
@@ -325,26 +333,26 @@ uint16_t min(uint16_t first, uint16_t second)
     return first < second ? first : second;
 }
 
-uint16_t get_cycle_from_analog(int16_t last_analog_value,
-                               int16_t current_analog_value,
+uint16_t get_cycle_from_analog(int32_t current_analog_value,
                                uint16_t total_cycles)
 {
-    uint16_t values_per_sample = MAX_12BIT_VALUE / total_cycles;
-    uint16_t half_point = values_per_sample / 2;
+    uint32_t values_per_sample = MAX_12BIT_VALUE / total_cycles;
+    uint32_t half_point = values_per_sample / 2;
 
     uint16_t current_index = current_analog_value / values_per_sample;
-    uint16_t last_index = last_analog_value / values_per_sample;
-
-    if (current_index == last_index)
+    if (current_index == g_selected_cycle)
     {
         return current_index;
     }
 
-    int16_t analog_direction = current_analog_value - last_analog_value;
+    int32_t last_analog_value =
+        (g_selected_cycle * values_per_sample) + half_point;
+    int32_t analog_direction = current_analog_value - last_analog_value;
     if (analog_direction > 0)
     {
-        uint16_t next_index_midpoint =
-            ((current_index + 1) * values_per_sample) - half_point;
+        int32_t next_index_midpoint =
+            (int32_t)((uint32_t)(g_selected_cycle + 1) * values_per_sample) +
+            half_point;
         if (current_analog_value >= next_index_midpoint)
         {
             return current_index;
@@ -352,14 +360,15 @@ uint16_t get_cycle_from_analog(int16_t last_analog_value,
     }
     else if (analog_direction < 0)
     {
-        uint16_t prev_index_midpoint =
-            (current_index * values_per_sample) + half_point;
+        int32_t prev_index_midpoint =
+            (int32_t)((uint32_t)g_selected_cycle * values_per_sample) -
+            half_point;
         if (current_analog_value < prev_index_midpoint)
         {
             return current_index;
         }
     }
-    return last_index;
+    return g_selected_cycle;
 }
 
 void wavetable_oscillation()
@@ -386,9 +395,6 @@ void wavetable_oscillation()
 #if 1
     uint16_t selected_cycle_analog_value = analogRead(PIN_WAVETABLE_POSITION);
 
-    uint16_t last_selected_cycle_analog_value =
-        get_last_analog_average(last_analog_position_values);
-
     last_analog_position_values[analog_position_index] =
         selected_cycle_analog_value;
     analog_position_index =
@@ -397,10 +403,9 @@ void wavetable_oscillation()
     selected_cycle_analog_value =
         get_last_analog_average(last_analog_position_values);
 
-#if 0
+#if 1
     uint16_t selected_cycle =
-        get_cycle_from_analog(last_selected_cycle_analog_value,
-                              selected_cycle_analog_value, osci.total_cycles);
+        get_cycle_from_analog(selected_cycle_analog_value, osci.total_cycles);
 #else
 
     uint16_t selected_cycle =
