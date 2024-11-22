@@ -117,7 +117,7 @@ void drop_callback(GLFWwindow* window, int count, const char** paths)
 
 #ifdef USE_SPP
 
-#define TARGET_DEVICE_NAME "WaveTablePP"
+#define TARGET_DEVICE_NAME L"WaveTablePP_2"
 
 bool wait_for_respons(SOCKET socket, uint8_t value)
 {
@@ -236,7 +236,7 @@ BTH_ADDR find_device_address(void)
     do
     {
         printf("Found device: %ls\n", device_info.szName);
-        if (wcscmp(device_info.szName, L"WaveTablePP") == 0)
+        if (wcscmp(device_info.szName, TARGET_DEVICE_NAME) == 0)
         {
             printf("Found target device: %ls\n", device_info.szName);
             device_found = true;
@@ -291,8 +291,9 @@ int main(void)
         {
             if (parse_file)
             {
+                uint16_t samples_to_remove = 0;
                 converted_buffer =
-                    process_audio_buffer(prompt.c_str());
+                    process_audio_buffer(prompt.c_str(), 32);
                 parse_file = false;
                 send_disable = false;
             }

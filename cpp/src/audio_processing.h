@@ -8,6 +8,6 @@ typedef struct ByteArray
     uint8_t* data;
 } ByteArray;
 
-ByteArray process_audio_buffer(const char* file_name);
+ByteArray process_audio_buffer(const char* file_name, uint16_t total_cycles_to_send);
 
 #endif

@@ -201,7 +201,8 @@ void spp_setup(const char* name, TaskHandle_t* task_notification_handle,
     }
 }
 
-bool spp_is_complete(WaveTableOscillator* oscillator, SemaphoreHandle_t mutex)
+bool spp_is_complete(WaveTableOscillator* oscillator, SemaphoreHandle_t mutex,
+                     SemaphoreHandle_t mutex_screen)
 {
 
     if (g_spp.bluetooth.reading_samples)
@@ -222,11 +223,14 @@ bool spp_is_complete(WaveTableOscillator* oscillator, SemaphoreHandle_t mutex)
             {
                 if (xSemaphoreTake(mutex, portMAX_DELAY))
                 {
-                    wave_table_oscilator_clean(oscillator);
-                    WaveTableOscillator temp = *oscillator;
-                    *oscillator = g_temp_osci;
-                    g_temp_osci = temp;
-
+                    if (xSemaphoreTake(mutex_screen, portMAX_DELAY))
+                    {
+                        wave_table_oscilator_clean(oscillator);
+                        WaveTableOscillator temp = *oscillator;
+                        *oscillator = g_temp_osci;
+                        g_temp_osci = temp;
+                        xSemaphoreGive(mutex_screen);
+                    }
                     xSemaphoreGive(mutex);
                 }
                 return true;
@@ -237,7 +241,8 @@ bool spp_is_complete(WaveTableOscillator* oscillator, SemaphoreHandle_t mutex)
 }
 
 bool spp_look_for_incoming_messages(WaveTableOscillator* oscillator,
-                                    SemaphoreHandle_t mutex)
+                                    SemaphoreHandle_t mutex,
+                                    SemaphoreHandle_t mutex_screen)
 {
     const uint64_t start_time = millis();
     const uint64_t time_to_timeout = 500;
@@ -270,5 +275,5 @@ bool spp_look_for_incoming_messages(WaveTableOscillator* oscillator,
         g_spp.last_read_value_time = millis();
     }
 
-    return spp_is_complete(oscillator, mutex);
+    return spp_is_complete(oscillator, mutex, mutex_screen);
 }

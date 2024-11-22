@@ -92,8 +92,8 @@ smooth_avg_difference(const std::vector<float>& shift_avg_difference,
     for (int i = 0; i < shift_avg_difference.size(); i++)
     {
         int start = max_int(0, i - (window_size / 2));
-        int end =
-            min_int((int)shift_avg_difference.size(), i + (window_size / 2) + 1);
+        int end = min_int((int)shift_avg_difference.size(),
+                          i + (window_size / 2) + 1);
         float sum = 0;
         for (int j = start; j < end; j++)
         {
@@ -190,7 +190,8 @@ static uint8_t high(uint16_t value)
     return (uint8_t)((value >> 8) & 0xFF);
 }
 
-ByteArray process_audio_buffer(const char* file_name)
+ByteArray process_audio_buffer(const char* file_name,
+                               uint16_t total_cycles_to_send)
 {
     AudioBuffer audio_buffer = get_sample_data(file_name);
 
@@ -201,6 +202,10 @@ ByteArray process_audio_buffer(const char* file_name)
     find_local_minima(local_minima, smoothed, (int)shift_avg_difference.size());
     free(smoothed);
     uint16_t samples_per_cycle = calculate_samples_per_cycle(local_minima);
+    uint16_t total_cycles =
+        (uint16_t)(audio_buffer.size / (uint64_t)samples_per_cycle);
+    audio_buffer.size -=
+        (total_cycles - total_cycles_to_send) * samples_per_cycle;
 
     uint32_t header_size = 14;
     uint32_t total_bytes = ((uint32_t)audio_buffer.size * 2) + header_size;
