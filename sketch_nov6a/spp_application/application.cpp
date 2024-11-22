@@ -322,6 +322,44 @@ uint16_t min(uint16_t first, uint16_t second)
     return first < second ? first : second;
 }
 
+uint16_t get_cycle_from_analog(int16_t last_analog_value,
+                               int16_t current_analog_value,
+                               uint16_t total_cycles)
+{
+    uint16_t values_per_sample = MAX_12BIT_VALUE / total_cycles;
+    uint16_t half_point = values_per_sample / 2;
+
+    uint16_t current_index = current_analog_value / values_per_sample;
+    uint16_t last_index = last_analog_value / values_per_sample;
+
+    if (current_index == last_index)
+    {
+        return current_index;
+    }
+
+    int16_t analog_direction = current_analog_value - last_analog_value;
+    if (analog_direction > 0)
+    {
+        uint16_t next_index_midpoint =
+            ((current_index + 1) * values_per_sample) - half_point;
+        if (current_analog_value >= next_index_midpoint)
+        {
+           return current_index;
+        }
+        
+    }
+    else if (analog_direction < 0)
+    {
+        uint16_t prev_index_midpoint =
+            (current_index * values_per_sample) + half_point;
+        if (current_analog_value < prev_index_midpoint)
+        {
+            return current_index;
+        }
+    }
+    return last_index;
+}
+
 void wavetable_oscillation()
 {
     if (osci.total_cycles == 0 || osci.tables[0].samples == NULL)
@@ -331,7 +369,7 @@ void wavetable_oscillation()
 
     uint64_t wavetable_size = osci.samples_per_cycle;
 
-#if 0
+#if 1
     uint16_t pitch_analog_value = analogRead(PIN_PITCH_INPUT);
     last_analog_pitch_values[analog_pitch_index] = pitch_analog_value;
     analog_pitch_index =
@@ -343,7 +381,7 @@ void wavetable_oscillation()
     uint16_t frequency = analog_input_to_pitch(1000);
 #endif
 
-#if 0
+#if 1
     uint16_t selected_cycle_analog_value = analogRead(PIN_WAVETABLE_POSITION);
 
     last_analog_position_values[analog_position_index] =
@@ -354,8 +392,14 @@ void wavetable_oscillation()
     selected_cycle_analog_value =
         get_last_analog_average(last_analog_position_values);
 
-    uint16_t selected_cycle =
-        (selected_cycle_analog_value * osci.total_cycles) / MAX_12BIT_VALUE;
+    uint16_t selected_cycle = get_cycle_from_analog(
+        (int32_t)last_analog_position_values[minus_one_wrap(
+            analog_position_index, LAST_ANALOG_VALUES_SIZE)],
+        (int32_t)last_analog_position_values[analog_position_index],
+        osci.total_cycles);
+
+    // uint16_t selected_cycle =
+    //    (selected_cycle_analog_value * osci.total_cycles) / MAX_12BIT_VALUE;
 #else
     uint16_t selected_cycle = display_wave_index;
 #endif
@@ -380,6 +424,7 @@ void wavetable_oscillation()
     uint64_t difference = current_time - next_sample_time;
     if (difference >= 0)
     {
+
         if (selected_cycle >= osci.total_cycles)
         {
             selected_cycle = osci.total_cycles - 1;

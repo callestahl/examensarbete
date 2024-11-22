@@ -3,6 +3,7 @@ module com.userside {
     requires javafx.fxml;
     requires bluecove;
     requires java.desktop;
+    requires javafx.graphics;
 
     opens com.userside to javafx.fxml;
     exports com.userside;

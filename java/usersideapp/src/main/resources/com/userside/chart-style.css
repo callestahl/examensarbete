@@ -1,0 +1,29 @@
+.chart {
+    -fx-background-color: white; /* Set the overall chart background to white */
+    -fx-border-color: transparent; /* Remove border around the chart */
+}
+
+.chart-series-line {
+    -fx-stroke: black; /* Set the line color to black */
+    -fx-stroke-width: 2; /* Optional: Set the line thickness */
+}
+
+.chart-plot-background {
+    -fx-background-color: white; /* Set the plot background to white */
+}
+
+.chart-horizontal-grid-lines, .chart-vertical-grid-lines {
+    -fx-stroke: transparent; /* Hide grid lines */
+}
+
+.chart-axis {
+    -fx-tick-label-fill: black; /* Axis labels in black */
+    -fx-axis-line-visible: true; /* Ensure axis lines are visible */
+    -fx-tick-mark-length: 0; /* Remove tick marks */
+}
+
+.chart-legend {
+    -fx-background-color: transparent; /* Remove legend background */
+    -fx-border-color: transparent;
+    -fx-text-fill: black;
+}

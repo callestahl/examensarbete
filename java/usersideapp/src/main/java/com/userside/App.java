@@ -32,7 +32,10 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 
 
@@ -114,6 +117,10 @@ public class App extends Application {
                 success = true;
                 sendButton.setDisable(false);  
                 wavFileProcessor.readWaveFile(currentFile);
+                HBox hBox = new HBox();
+                hBox.getChildren().add(getLineChart(wavFileProcessor.shiftAvgDifference, 0));
+                //hBox.getChildren().add(getLineChart(wavFileProcessor.normalizedBuffer, 0));
+                values.getChildren().add(hBox);
             }
             event.setDropCompleted(success);
             event.consume();
@@ -132,17 +139,59 @@ public class App extends Application {
     private LineChart<Number,Number> getLineChart(ArrayList<Float> values, int offset) {
         NumberAxis xAxis = new NumberAxis();
         NumberAxis yAxis = new NumberAxis();
-        xAxis.setLabel("DD");
+        yAxis.setLabel("AMDF for Shift");
+        xAxis.setLabel("Shift (Samples)");
+        ((Label) xAxis.lookup(".axis-label")).setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        ((Label) yAxis.lookup(".axis-label")).setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        //xAxis.lookup(".axis-label").setStyle("-fx-font-size: 16px;");
+        //yAxis.lookup(".axis-label").setStyle("-fx-font-size: 16px;");
+
         LineChart<Number,Number> lineChart = new LineChart<Number,Number>(xAxis,yAxis);
+        lineChart.setCreateSymbols(false);
         XYChart.Series<Number,Number> series = new XYChart.Series<>();
-        for(int i = 0; i < 151*4; ++i) {
+        for(int i = 0; i < 150 * 4; ++i) {
             series.getData().add(new XYChart.Data<>(i, values.get(i + offset)));
         }
         lineChart.getData().add(series);
-        //lineChart.setPrefSize(20, 20);
+        lineChart.setStyle("-fx-background-color: white;"); 
+        lineChart.getStylesheets().add(getClass().getResource("chart-style.css").toExternalForm());
+        lineChart.setPrefSize(800, 600);
         return lineChart;
     }
 
+    private LineChart<Number, Number> getLineChart(float[] values, int offset) {
+        NumberAxis xAxis = new NumberAxis();
+        NumberAxis yAxis = new NumberAxis();
+        xAxis.setLabel("Antal samplingsvärden");
+        LineChart<Number, Number> lineChart = new LineChart<>(xAxis, yAxis);
+        lineChart.setCreateSymbols(false);
+
+        XYChart.Series<Number, Number> series = new XYChart.Series<>();
+        for (int i = 0; i < 150 * 4; ++i) {
+            series.getData().add(new XYChart.Data<>(i, values[i + offset]));
+        }
+        lineChart.getData().add(series);
+
+        lineChart.setStyle("-fx-background-color: white;"); 
+        lineChart.getStylesheets().add(getClass().getResource("chart-style.css").toExternalForm());
+        lineChart.setPrefSize(800, 600);
+
+        return lineChart;
+    }
+
+    private static float[] smoothArray(float[] array, int windowSize) {
+        float[] smoothed = new float[array.length];
+        for (int i = 0; i < array.length; i++) {
+            int start = Math.max(0, i - windowSize / 2);
+            int end = Math.min(array.length, i + windowSize / 2 + 1);
+            float sum = 0;
+            for (int j = start; j < end; j++) {
+                sum += array[j];
+            }
+            smoothed[i] = sum / (end - start);
+        }
+        return smoothed;
+    }
 
     static void setRoot(String fxml) throws IOException {
         scene.setRoot(loadFXML(fxml));
