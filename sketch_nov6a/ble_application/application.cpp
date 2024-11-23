@@ -1,11 +1,13 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
 #include <SPI.h>
+#include <SPIFFS.h>
 
 #include "MCP_DAC.h"
 
 #include "wave_table.h"
 #include "ble.h"
+#include "bluetooth.h"
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128
@@ -104,9 +106,11 @@ void ble_task(void* data)
     while (true)
     {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        if(ble_copy_transfer(&osci, g_oscillator_mutex,
-                                           g_oscillator_screen_mutex))
+        if (ble_copy_transfer(&osci, g_oscillator_mutex,
+                              g_oscillator_screen_mutex))
         {
+            wave_table_oscilator_write_to_file(&osci);
+
             display_wave_index = 0;
             if (g_redraw_screen_task_handle != NULL)
             {
@@ -116,9 +120,18 @@ void ble_task(void* data)
     }
 }
 
+uint16_t file_get_uint16(File* file)
+{
+    uint8_t high = file->read();
+    uint8_t low = file->read();
+    return ((uint16_t)high << 8) | ((uint16_t)low);
+}
+
 void application_setup()
 {
     Serial.begin(115200);
+
+    SPIFFS.begin(true);
 
     pinMode(button_pin0, INPUT);
     pinMode(button_pin1, INPUT);
@@ -148,6 +161,23 @@ void application_setup()
     osci.tables_capacity = 256;
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
 
+    File file = SPIFFS.open("/osci.txt", FILE_READ);
+
+    if (file && file.available())
+    {
+        uint16_t cycle_sample_count = file_get_uint16(&file);
+        osci.samples_per_cycle = cycle_sample_count;
+        Bluetooth bluetooth = { 0 };
+        while (file.available())
+        {
+            uint16_t sample = file_get_uint16(&file);
+            bluetooth_process_sample(&bluetooth, sample, &osci);
+        }
+        redraw_screen(0);
+
+        file.close();
+    }
+
     xTaskCreatePinnedToCore(redraw_screen_task, "Screen Redraw", STACK_SIZE,
                             NULL, 1, &g_redraw_screen_task_handle, 0);
     xTaskCreatePinnedToCore(ble_task, "SPP messages", STACK_SIZE, NULL, 1,
@@ -176,8 +206,8 @@ void redraw_screen(uint16_t cycle_index)
     wave_table_draw(&osci.tables[cycle_index], osci.samples_per_cycle);
 
     display.setCursor(0, 40 + (SCREEN_HEIGHT / 2));
-    display.printf("Total: %u\n", osci.total_cycles);
-    display.printf("Analog: %u\n", g_analog_value);
+    display.printf("Position: %u\n", cycle_index);
+    //display.printf("Analog: %u\n", g_analog_value);
 }
 
 const uint32_t screen_width_with_fraction = SCREEN_WIDTH << 16;
@@ -392,7 +422,8 @@ void wavetable_oscillation()
 #endif
 
 #if 1
-    uint16_t selected_cycle_analog_value = g_analog_value; //analogRead(PIN_WAVETABLE_POSITION);
+    uint16_t selected_cycle_analog_value =
+        g_analog_value; // analogRead(PIN_WAVETABLE_POSITION);
 
     last_analog_position_values[analog_position_index] =
         selected_cycle_analog_value;

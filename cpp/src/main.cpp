@@ -16,7 +16,7 @@
 #include "audio_processing.h"
 #include "utils.h"
 
-#define USE_SPP
+//#define USE_SPP
 
 typedef struct CharArray
 {
@@ -347,6 +347,9 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
         }
     }
 
+    // - 3 for GATT header, 512 per Bluetooth specification is max user values
+    uint32_t mtu = min(512, target_service.Session().MaxPduSize() - 3);
+
     auto characteristic_result = target_service.GetCharacteristicsAsync().get();
     auto characteristic = characteristic_result.Characteristics();
     GattCharacteristic target_characteristic = NULL;
@@ -365,7 +368,7 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
     }
 
     printf("Sending\n");
-    uint32_t chunk_size = 512;
+    uint32_t chunk_size = mtu;
     uint32_t chunks = buffer.size / chunk_size;
     uint32_t remainder = buffer.size % chunk_size;
     auto write_buffer = Windows::Storage::Streams::Buffer(chunk_size);

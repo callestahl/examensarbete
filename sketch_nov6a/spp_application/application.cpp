@@ -107,6 +107,8 @@ void spp_task(void* data)
         if (spp_look_for_incoming_messages(&osci, g_oscillator_mutex,
                                            g_oscillator_screen_mutex))
         {
+            wave_table_oscilator_write_to_file(&osci);
+
             display_wave_index = 0;
             if (g_redraw_screen_task_handle != NULL)
             {
@@ -119,6 +121,8 @@ void spp_task(void* data)
 void application_setup()
 {
     Serial.begin(115200);
+
+    SPIFFS.begin(true);
 
     pinMode(button_pin0, INPUT);
     pinMode(button_pin1, INPUT);
@@ -147,6 +151,23 @@ void application_setup()
 
     osci.tables_capacity = 256;
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
+
+    File file = SPIFFS.open("/osci.txt", FILE_READ);
+
+    if (file && file.available())
+    {
+        uint16_t cycle_sample_count = file_get_uint16(&file);
+        osci.samples_per_cycle = cycle_sample_count;
+        Bluetooth bluetooth = { 0 };
+        while (file.available())
+        {
+            uint16_t sample = file_get_uint16(&file);
+            bluetooth_process_sample(&bluetooth, sample, &osci);
+        }
+        redraw_screen(0);
+
+        file.close();
+    }
 
     xTaskCreatePinnedToCore(redraw_screen_task, "Screen Redraw", STACK_SIZE,
                             NULL, 1, &g_redraw_screen_task_handle, 0);

@@ -20,5 +20,6 @@ uint16_t wave_table_linear_interpolation(const WaveTable* table, uint32_t table_
 void wave_table_oscilator_update_phase(WaveTableOscillator* oscilator);
 uint16_t lerp(uint16_t a, uint16_t b, uint32_t fraction);
 void wave_table_oscilator_clean(WaveTableOscillator* oscilator);
+void wave_table_oscilator_write_to_file(const WaveTableOscillator* oscillator);
 
 #endif
