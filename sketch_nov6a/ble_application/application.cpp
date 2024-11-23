@@ -1,6 +1,5 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
-
 #include <SPI.h>
 
 #include "MCP_DAC.h"
@@ -34,8 +33,8 @@
 #define SSD1351_GREEN RGB565(0, 63, 0)
 #define SSD1351_BLUE RGB565(0, 0, 31)
 
-#define STACK_SIZE 2048
-#define QUEUE_LENGTH 10
+#define STACK_SIZE 4096
+#define SPP_QUEUE_SIZE 4096
 
 struct Button
 {
@@ -76,24 +75,42 @@ uint64_t button_repeat_reset = 0;
 
 uint64_t sample_period_us = 1000000 / SAMPLE_RATE;
 uint64_t next_sample_time;
-
-QueueHandle_t cycle_queue;
+static SemaphoreHandle_t g_oscillator_mutex = NULL;
+static SemaphoreHandle_t g_oscillator_screen_mutex = NULL;
 
 volatile uint16_t g_selected_cycle = 0;
+static TaskHandle_t g_redraw_screen_task_handle = NULL;
 
 void redraw_screen_task(void* data)
 {
-    uint16_t last_drawn_cycle = MAX_16BIT_VALUE;
     while (true)
     {
-        vTaskDelay(pdMS_TO_TICKS(100));
-
-        if (g_selected_cycle != last_drawn_cycle)
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        if (osci.total_cycles > 0)
         {
-            last_drawn_cycle = g_selected_cycle;
-            if (osci.total_cycles > 0)
+            if (xSemaphoreTake(g_oscillator_screen_mutex, portMAX_DELAY))
             {
-                redraw_screen(last_drawn_cycle);
+                redraw_screen(g_selected_cycle);
+                xSemaphoreGive(g_oscillator_screen_mutex);
+            }
+        }
+    }
+}
+
+static TaskHandle_t g_ble_task_handle = NULL;
+
+void ble_task(void* data)
+{
+    while (true)
+    {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        if(ble_copy_transfer(&osci, g_oscillator_mutex,
+                                           g_oscillator_screen_mutex))
+        {
+            display_wave_index = 0;
+            if (g_redraw_screen_task_handle != NULL)
+            {
+                xTaskNotifyGive(g_redraw_screen_task_handle);
             }
         }
     }
@@ -119,30 +136,38 @@ void application_setup()
     display.setTextColor(SSD1351_WHITE);
     display.setTextSize(1);
     display.println("Hello1");
+    display.println("Hello2");
 
     next_sample_time = micros();
 
-    ble_setup(&display);
+    g_oscillator_mutex = xSemaphoreCreateMutex();
+    g_oscillator_screen_mutex = xSemaphoreCreateMutex();
+
+    ble_setup("WaveTablePP", &g_ble_task_handle);
 
     osci.tables_capacity = 256;
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
 
-    xTaskCreate(redraw_screen_task, "Screen Redraw", STACK_SIZE, NULL, 1, NULL);
+    xTaskCreatePinnedToCore(redraw_screen_task, "Screen Redraw", STACK_SIZE,
+                            NULL, 1, &g_redraw_screen_task_handle, 0);
+    xTaskCreatePinnedToCore(ble_task, "SPP messages", STACK_SIZE, NULL, 1,
+                            &g_ble_task_handle, 0);
 }
 
 void application_loop()
 {
-    if (ble_copy_transfer(&osci))
-    {
-        display_wave_index = 0;
-        redraw_screen(0);
-    }
     process_buttons();
     if (osci.total_cycles > 0)
     {
-        wavetable_oscillation();
+        if (xSemaphoreTake(g_oscillator_mutex, portMAX_DELAY))
+        {
+            wavetable_oscillation();
+            xSemaphoreGive(g_oscillator_mutex);
+        }
     }
 }
+
+uint16_t g_analog_value = 0;
 
 void redraw_screen(uint16_t cycle_index)
 {
@@ -151,7 +176,8 @@ void redraw_screen(uint16_t cycle_index)
     wave_table_draw(&osci.tables[cycle_index], osci.samples_per_cycle);
 
     display.setCursor(0, 40 + (SCREEN_HEIGHT / 2));
-    display.printf("Position: %u\n", cycle_index);
+    display.printf("Total: %u\n", osci.total_cycles);
+    display.printf("Analog: %u\n", g_analog_value);
 }
 
 const uint32_t screen_width_with_fraction = SCREEN_WIDTH << 16;
@@ -233,12 +259,14 @@ void process_buttons()
             (!button0.button_pressed &&
              ((millis() - button0.last_debounce_time) > debounce_delay)))
         {
-            display_wave_index =
-                plus_one_wrap(display_wave_index, osci.total_cycles);
+            // display_wave_index =
+            // plus_one_wrap(display_wave_index, osci.total_cycles);
+            g_analog_value += 5;
 
             button0.button_pressed = true;
             button0.last_debounce_time = millis();
             button_repeat_reset = millis() + 200;
+            xTaskNotifyGive(g_redraw_screen_task_handle);
         }
     }
     else
@@ -257,11 +285,14 @@ void process_buttons()
         if (!button1.button_pressed &&
             ((millis() - button1.last_debounce_time) > debounce_delay))
         {
-            display_wave_index =
-                minus_one_wrap(display_wave_index, osci.total_cycles);
+            // display_wave_index =
+            // minus_one_wrap(display_wave_index, osci.total_cycles);
+
+            g_analog_value -= 5;
 
             button1.button_pressed = true;
             button1.last_debounce_time = millis();
+            xTaskNotifyGive(g_redraw_screen_task_handle);
         }
     }
     else
@@ -279,7 +310,7 @@ uint16_t last_selected_cycle = MAX_16BIT_VALUE;
 
 uint64_t timer = millis();
 
-const uint8_t LAST_ANALOG_VALUES_SIZE = 50;
+const uint8_t LAST_ANALOG_VALUES_SIZE = 20;
 
 uint16_t analog_pitch_index = 0;
 uint16_t last_analog_pitch_values[LAST_ANALOG_VALUES_SIZE] = { 0 };
@@ -300,6 +331,43 @@ uint16_t get_last_analog_average(uint16_t* values)
 uint16_t min(uint16_t first, uint16_t second)
 {
     return first < second ? first : second;
+}
+
+uint16_t get_cycle_from_analog(int32_t current_analog_value,
+                               uint16_t total_cycles)
+{
+    uint32_t values_per_sample = MAX_12BIT_VALUE / total_cycles;
+    uint32_t half_point = values_per_sample / 2;
+
+    uint16_t current_index = current_analog_value / values_per_sample;
+    if (current_index == g_selected_cycle)
+    {
+        return current_index;
+    }
+
+    int32_t last_analog_value =
+        (g_selected_cycle * values_per_sample) + half_point;
+    int32_t analog_direction = current_analog_value - last_analog_value;
+    if (analog_direction > 0)
+    {
+        int32_t next_index_midpoint =
+            (((uint32_t)g_selected_cycle + 1) * values_per_sample) + half_point;
+        if (current_analog_value >= next_index_midpoint)
+        {
+            return current_index;
+        }
+    }
+    else if (analog_direction < 0)
+    {
+        int32_t prev_index_midpoint =
+            (int32_t)((uint32_t)g_selected_cycle * values_per_sample) -
+            half_point;
+        if (current_analog_value < prev_index_midpoint)
+        {
+            return current_index;
+        }
+    }
+    return g_selected_cycle;
 }
 
 void wavetable_oscillation()
@@ -323,8 +391,8 @@ void wavetable_oscillation()
     uint16_t frequency = analog_input_to_pitch(1000);
 #endif
 
-#if 0
-    uint16_t selected_cycle_analog_value = analogRead(PIN_WAVETABLE_POSITION);
+#if 1
+    uint16_t selected_cycle_analog_value = g_analog_value; //analogRead(PIN_WAVETABLE_POSITION);
 
     last_analog_position_values[analog_position_index] =
         selected_cycle_analog_value;
@@ -334,8 +402,14 @@ void wavetable_oscillation()
     selected_cycle_analog_value =
         get_last_analog_average(last_analog_position_values);
 
+#if 1
+    uint16_t selected_cycle =
+        get_cycle_from_analog(selected_cycle_analog_value, osci.total_cycles);
+#else
+
     uint16_t selected_cycle =
         (selected_cycle_analog_value * osci.total_cycles) / MAX_12BIT_VALUE;
+#endif
 #else
     uint16_t selected_cycle = display_wave_index;
 #endif
@@ -360,6 +434,7 @@ void wavetable_oscillation()
     uint64_t difference = current_time - next_sample_time;
     if (difference >= 0)
     {
+
         if (selected_cycle >= osci.total_cycles)
         {
             selected_cycle = osci.total_cycles - 1;
@@ -368,7 +443,10 @@ void wavetable_oscillation()
 
         if (selected_cycle != last_selected_cycle)
         {
-            // redraw_screen(selected_cycle);
+            if (g_redraw_screen_task_handle != NULL)
+            {
+                xTaskNotifyGive(g_redraw_screen_task_handle);
+            }
             last_selected_cycle = selected_cycle;
         }
 

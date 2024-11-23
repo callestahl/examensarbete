@@ -20,6 +20,10 @@ global uint32_t g_table_index = 0;
 global uint32_t g_sample_index = 0;
 global WaveTableOscillator g_temp_osci = { 0 };
 
+global uint64_t g_read_bytes = 0;
+global uint64_t g_bytes_to_read = 0;
+global TaskHandle_t* g_task_notification_handle;
+
 global Adafruit_SSD1351* g_display = NULL;
 
 class MyServerCallbacks : public BLEServerCallbacks
@@ -33,7 +37,6 @@ class MyServerCallbacks : public BLEServerCallbacks
     {
         bluetooth_reset(&g_bluetooth);
         g_device_connected = false;
-        g_bluetooth.reading_samples = false;
     }
 };
 
@@ -44,16 +47,26 @@ internal uint16_t ble_get_uint16(const uint8_t* data, uint32_t index)
     return ((uint16_t)high << 8) | ((uint16_t)low);
 }
 
+void ble_read_header(uint8_t* data)
+{
+    g_read_bytes = 0;
+    g_bytes_to_read = 0;
+
+    uint16_t cycle_sample_count = ble_get_uint16(data, 8);
+    g_temp_osci.samples_per_cycle = cycle_sample_count;
+    g_temp_osci.total_cycles = 0;
+    g_bluetooth.header_read = true;
+
+    uint16_t bytes_to_received_high = ble_get_uint16(data, 10);
+    uint16_t bytes_to_received_low = ble_get_uint16(data, 12);
+    g_bytes_to_read = ((uint32_t)bytes_to_received_high << 16) |
+                      (uint32_t)bytes_to_received_low;
+}
+
 class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
 {
     void onWrite(BLECharacteristic* characteristic) override
     {
-        String message = characteristic->getValue();
-        if(message.equals("DONE"))
-        {
-            g_bluetooth.reading_samples = false;
-            return;
-        }
         uint8_t* data = characteristic->getData();
         size_t length = characteristic->getLength();
 
@@ -64,12 +77,7 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
             uint32_t i = 0;
             if (!g_bluetooth.header_read)
             {
-                i = 8;
-                uint16_t cycle_sample_count = ble_get_uint16(data, i);
-                g_temp_osci.samples_per_cycle = cycle_sample_count;
-                g_temp_osci.total_cycles = 0;
-                g_bluetooth.header_read = true;
-
+                ble_read_header(data);
                 i = 14;
             }
             for (; i < length; i += 2)
@@ -78,18 +86,27 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
                 bluetooth_process_sample(&g_bluetooth, sample, &g_temp_osci);
             }
         }
+        g_read_bytes += length;
+        if (g_read_bytes == g_bytes_to_read)
+        {
+            g_bluetooth.reading_samples = false;
+            if (*g_task_notification_handle != NULL)
+            {
+                xTaskNotifyGive(*g_task_notification_handle);
+            }
+        }
     }
 };
 
-void ble_setup(void* display)
+void ble_setup(const char* name, TaskHandle_t* task_notification_handle)
 {
-    g_display = (Adafruit_SSD1351*)display;
-
     g_temp_osci.tables_capacity = 256;
     g_temp_osci.tables =
         (WaveTable*)calloc(g_temp_osci.tables_capacity, sizeof(WaveTable));
 
-    BLEDevice::init("WaveTablePP");
+    g_task_notification_handle = task_notification_handle;
+
+    BLEDevice::init(name);
     BLEServer* server = BLEDevice::createServer();
     server->setCallbacks(new MyServerCallbacks());
 
@@ -117,14 +134,25 @@ bool ble_device_is_connected(void)
     return g_device_connected;
 }
 
-bool ble_copy_transfer(WaveTableOscillator* oscilator)
+bool ble_copy_transfer(WaveTableOscillator* oscillator, SemaphoreHandle_t mutex,
+                       SemaphoreHandle_t mutex_screen)
 {
-    if ((!g_bluetooth.reading_samples || !g_device_connected) && g_temp_osci.total_cycles != 0)
+    
+    if ((!g_bluetooth.reading_samples || !g_device_connected) &&
+        g_temp_osci.total_cycles != 0 && (g_read_bytes == g_bytes_to_read))
     {
-        wave_table_oscilator_clean(oscilator);
-        WaveTableOscillator temp = *oscilator;
-        *oscilator = g_temp_osci;
-        g_temp_osci = temp;
+        if (xSemaphoreTake(mutex, portMAX_DELAY))
+        {
+            if (xSemaphoreTake(mutex_screen, portMAX_DELAY))
+            {
+                wave_table_oscilator_clean(oscillator);
+                WaveTableOscillator temp = *oscillator;
+                *oscillator = g_temp_osci;
+                g_temp_osci = temp;
+                xSemaphoreGive(mutex_screen);
+            }
+            xSemaphoreGive(mutex);
+        }
         return true;
     }
     return false;

@@ -1,7 +1,7 @@
 #include "audio_processing.h"
+#include "utils.h"
+
 #include <stdlib.h>
-#include <vector>
-#include <algorithm>
 
 #include <dr_wav/dr_wav.h>
 
@@ -12,6 +12,20 @@ typedef struct AudioBuffer
     uint64_t size;
     float* data;
 } AudioBuffer;
+
+typedef struct FloatArray
+{
+    uint32_t size;
+    uint32_t capacity;
+    float* data;
+} FloatArray;
+
+typedef struct Uint32Array
+{
+    uint32_t size;
+    uint32_t capacity;
+    uint32_t* data;
+} Uint32Array;
 
 static void convert_stereo_to_mono_sum_average(AudioBuffer* audio_buffer)
 {
@@ -52,60 +66,48 @@ static AudioBuffer get_sample_data(const char* file_name)
     return audio_buffer;
 }
 
-static void
-average_magnitude_difference(const AudioBuffer& audio_buffer,
-                             std::vector<float>& shift_avg_difference)
+static void average_magnitude_difference(const AudioBuffer& audio_buffer,
+                                         FloatArray* shift_avg_difference)
 {
-    int maxShift = (int)audio_buffer.sample_rate / 20;
-    for (int shift = 0; shift < maxShift; shift++)
+    int max_shift = (int)audio_buffer.sample_rate / 20;
+    array_create(shift_avg_difference, max_shift);
+    for (int shift = 0; shift < max_shift; shift++)
     {
         float total_difference = 0;
-        for (int j = shift; j < maxShift - shift; j++)
+        for (int j = shift; j < max_shift - shift; j++)
         {
-            total_difference +=
-                abs(audio_buffer.data[j] - audio_buffer.data[j + shift]);
+            total_difference += abs_float(
+                (audio_buffer.data[j] - audio_buffer.data[j + shift]));
         }
         float avg = total_difference / (audio_buffer.size - shift);
         if (avg > 0.001f)
         {
-            shift_avg_difference.push_back(avg);
+            array_append(shift_avg_difference, avg);
         }
     }
 }
 
-int max_int(int first, int second)
+static float* smooth_avg_difference(const FloatArray& shift_avg_difference,
+                                    int32_t window_size)
 {
-    return first > second ? first : second;
-}
-
-int min_int(int first, int second)
-{
-    return first < second ? first : second;
-}
-
-static float*
-smooth_avg_difference(const std::vector<float>& shift_avg_difference,
-                      int window_size)
-{
-    float* smoothed =
-        (float*)calloc(shift_avg_difference.size(), sizeof(float));
-    for (int i = 0; i < shift_avg_difference.size(); i++)
+    float* smoothed = (float*)calloc(shift_avg_difference.size, sizeof(float));
+    for (int32_t i = 0; i < (int32_t)shift_avg_difference.size; i++)
     {
-        int start = max_int(0, i - (window_size / 2));
-        int end = min_int((int)shift_avg_difference.size(),
-                          i + (window_size / 2) + 1);
+        int32_t start = max_int(0, i - (window_size / 2));
+        int32_t end = min_int((int32_t)shift_avg_difference.size,
+                              i + (window_size / 2) + 1);
         float sum = 0;
-        for (int j = start; j < end; j++)
+        for (int32_t j = start; j < end; j++)
         {
-            sum += shift_avg_difference[j];
+            sum += shift_avg_difference.data[j];
         }
         smoothed[i] = sum / (end - start);
     }
     return smoothed;
 }
 
-static void find_local_minima(std::vector<uint32_t>& local_minima,
-                              float* smooth, int size)
+static void find_local_minima(Uint32Array* local_minima, float* smooth,
+                              int size)
 {
     int scan_count = size / 10;
     for (int j = 0; j < size; ++j)
@@ -134,50 +136,58 @@ static void find_local_minima(std::vector<uint32_t>& local_minima,
         }
         if (!jump)
         {
-            local_minima.push_back((uint32_t)j);
+            array_append(local_minima, (uint32_t)j);
         }
     }
 }
 
-static uint16_t
-calculate_samples_per_cycle(const std::vector<uint32_t>& local_minima)
+static uint16_t calculate_samples_per_cycle(const Uint32Array& local_minima)
 {
-    std::vector<uint32_t> counts;
-    for (int j = 1; j < local_minima.size(); ++j)
+    uint32_t count_size = local_minima.size - 1;
+    uint32_t* counts = (uint32_t*)calloc(count_size, sizeof(uint32_t));
+    for (int32_t j = 1; j < (int32_t)local_minima.size; ++j)
     {
-        uint32_t sample_count = local_minima[j] - local_minima[j - 1];
-        counts.push_back(sample_count);
+        uint32_t sample_count = local_minima.data[j] - local_minima.data[j - 1];
+        counts[j - 1] = sample_count;
     }
 
-    std::sort(counts.begin(), counts.end());
+    raddix_counting_sort(counts, count_size);
 
-    int median = 0;
-    size_t size = counts.size();
-    if (size % 2 == 0)
+    int32_t median = 0;
+    if (count_size % 2 == 0)
     {
-        median = (counts[size / 2 - 1] + counts[size / 2]) / 2;
+        median =
+            (int32_t)(counts[count_size / 2 - 1] + counts[count_size / 2]) / 2;
     }
     else
     {
-        median = counts[size / 2];
+        median = (int32_t)counts[count_size / 2];
     }
 
-    int threshold = 8;
-    std::vector<uint32_t> filtered_counts;
-    for (int count : counts)
+    uint32_t filtered_counts_size = 0;
+    uint32_t* filtered_counts = (uint32_t*)calloc(count_size, sizeof(uint32_t));
+    int32_t threshold = 8;
+    for (uint32_t i = 0; i < count_size; ++i)
     {
-        if (abs(count - median) <= threshold)
+        int32_t count = (int32_t)counts[i];
+        if (abs_int32(count - median) <= threshold)
         {
-            filtered_counts.push_back(count);
+            filtered_counts[filtered_counts_size++] = count;
         }
     }
 
     uint32_t sum = 0;
-    for (uint32_t filtered_count : filtered_counts)
+    for (uint32_t i = 0; i < filtered_counts_size; ++i)
     {
-        sum += filtered_count;
+        sum += filtered_counts[i];
     }
-    return (uint16_t)(sum / filtered_counts.size());
+
+    uint16_t result = (uint16_t)(sum / filtered_counts_size);
+
+    free(counts);
+    free(filtered_counts);
+
+    return result;
 }
 
 static uint8_t low(uint16_t value)
@@ -195,17 +205,23 @@ ByteArray process_audio_buffer(const char* file_name,
 {
     AudioBuffer audio_buffer = get_sample_data(file_name);
 
-    std::vector<float> shift_avg_difference;
-    average_magnitude_difference(audio_buffer, shift_avg_difference);
+    FloatArray shift_avg_difference = { 0 };
+    average_magnitude_difference(audio_buffer, &shift_avg_difference);
+
     float* smoothed = smooth_avg_difference(shift_avg_difference, 5);
-    std::vector<uint32_t> local_minima;
-    find_local_minima(local_minima, smoothed, (int)shift_avg_difference.size());
-    free(smoothed);
+
+    Uint32Array local_minima = { 0 };
+    array_create(&local_minima, 100);
+    find_local_minima(&local_minima, smoothed,
+                      (int32_t)shift_avg_difference.size);
+
     uint16_t samples_per_cycle = calculate_samples_per_cycle(local_minima);
     uint16_t total_cycles =
         (uint16_t)(audio_buffer.size / (uint64_t)samples_per_cycle);
+
     audio_buffer.size -=
-        (total_cycles - total_cycles_to_send) * samples_per_cycle;
+        ((total_cycles - total_cycles_to_send) * samples_per_cycle) *
+        (total_cycles_to_send != 0);
 
     uint32_t header_size = 14;
     uint32_t total_bytes = ((uint32_t)audio_buffer.size * 2) + header_size;
@@ -256,5 +272,10 @@ ByteArray process_audio_buffer(const char* file_name,
         result.data[j++] = high(converted_value);
         result.data[j++] = low(converted_value);
     }
+
+    array_free(&local_minima);
+    array_free(&shift_avg_difference);
+    free(smoothed);
+
     return result;
 }

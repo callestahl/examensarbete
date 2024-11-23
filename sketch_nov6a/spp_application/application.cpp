@@ -120,8 +120,8 @@ void application_setup()
 {
     Serial.begin(115200);
 
-    // pinMode(button_pin0, INPUT);
-    // pinMode(button_pin1, INPUT);
+    pinMode(button_pin0, INPUT);
+    pinMode(button_pin1, INPUT);
 
     pinMode(PIN_PITCH_INPUT, INPUT);
     pinMode(PIN_WAVETABLE_POSITION, INPUT);
@@ -156,7 +156,7 @@ void application_setup()
 
 void application_loop()
 {
-    // process_buttons();
+    process_buttons();
     if (osci.total_cycles > 0)
     {
         if (xSemaphoreTake(g_oscillator_mutex, portMAX_DELAY))
@@ -310,7 +310,7 @@ uint16_t last_selected_cycle = MAX_16BIT_VALUE;
 
 uint64_t timer = millis();
 
-const uint8_t LAST_ANALOG_VALUES_SIZE = 50;
+const uint8_t LAST_ANALOG_VALUES_SIZE = 20;
 
 uint16_t analog_pitch_index = 0;
 uint16_t last_analog_pitch_values[LAST_ANALOG_VALUES_SIZE] = { 0 };
@@ -351,8 +351,7 @@ uint16_t get_cycle_from_analog(int32_t current_analog_value,
     if (analog_direction > 0)
     {
         int32_t next_index_midpoint =
-            (int32_t)((uint32_t)(g_selected_cycle + 1) * values_per_sample) +
-            half_point;
+            (((uint32_t)g_selected_cycle + 1) * values_per_sample) + half_point;
         if (current_analog_value >= next_index_midpoint)
         {
             return current_index;
@@ -380,7 +379,7 @@ void wavetable_oscillation()
 
     uint64_t wavetable_size = osci.samples_per_cycle;
 
-#if 1
+#if 0
     uint16_t pitch_analog_value = analogRead(PIN_PITCH_INPUT);
     last_analog_pitch_values[analog_pitch_index] = pitch_analog_value;
     analog_pitch_index =
@@ -393,7 +392,7 @@ void wavetable_oscillation()
 #endif
 
 #if 1
-    uint16_t selected_cycle_analog_value = analogRead(PIN_WAVETABLE_POSITION);
+    uint16_t selected_cycle_analog_value = g_analog_value; //analogRead(PIN_WAVETABLE_POSITION);
 
     last_analog_position_values[analog_position_index] =
         selected_cycle_analog_value;

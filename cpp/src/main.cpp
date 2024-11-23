@@ -1,12 +1,10 @@
+// #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <windows.h>
-#include <bthsdpdef.h>
 #include <bluetoothapis.h>
 #include <ws2bth.h>
 
 #include <stdio.h>
-#include <stdint.h>
-#include <string>
 
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
@@ -16,8 +14,33 @@
 #include <imgui/imgui_impl_opengl3.h>
 
 #include "audio_processing.h"
+#include "utils.h"
 
 #define USE_SPP
+
+typedef struct CharArray
+{
+    uint32_t size;
+    uint32_t capacity;
+    char* data;
+} CharArray, String;
+
+void string_append(String* string, char character)
+{
+    array_append(string, character);
+    array_append(string, '\0');
+}
+
+void string_copy(String* string, const char* string_to_copy,
+                 uint32_t string_length)
+{
+    string->size = 0;
+    for (uint32_t i = 0; i < string_length; ++i)
+    {
+        array_append(string, string_to_copy[i]);
+    }
+    array_append(string, '\0');
+}
 
 void imgui_initialize(GLFWwindow* window)
 {
@@ -45,7 +68,7 @@ void imgui_begin_frame(void)
     ImGui::NewFrame();
 }
 
-std::string prompt = "Drop File";
+String prompt = { 0 };
 bool parse_file = false;
 bool send_disable = true;
 
@@ -74,7 +97,7 @@ bool imgui_update(GLFWwindow* window)
     ImGui::PushFont(io.Fonts->Fonts[1]);
 
     float spacing = 20.0f;
-    ImVec2 text_size = ImGui::CalcTextSize(prompt.c_str());
+    ImVec2 text_size = ImGui::CalcTextSize(prompt.data);
     ImVec2 button_size = ImVec2(100.0f, 30.0f);
 
     ImVec2 text_pos =
@@ -83,7 +106,7 @@ bool imgui_update(GLFWwindow* window)
 
     ImGui::SetCursorPos(text_pos);
 
-    ImGui::Text("%s", prompt.c_str());
+    ImGui::Text("%s", prompt.data);
 
     ImGui::PopFont();
 
@@ -108,16 +131,15 @@ bool imgui_update(GLFWwindow* window)
 
 void drop_callback(GLFWwindow* window, int count, const char** paths)
 {
-    prompt = paths[0];
+    string_copy(&prompt, paths[0], (uint32_t)strlen(paths[0]));
     parse_file = true;
     for (int i = 0; i < count; i++)
     {
     }
 }
+#define TARGET_DEVICE_NAME L"WaveTablePP"
 
 #ifdef USE_SPP
-
-#define TARGET_DEVICE_NAME L"WaveTablePP"
 
 bool wait_for_respons(SOCKET socket, uint8_t value)
 {
@@ -130,7 +152,7 @@ bool wait_for_respons(SOCKET socket, uint8_t value)
     return false;
 }
 
-void connect_and_send_file(BTH_ADDR device_address, const ByteArray& buffer)
+void connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
 {
     SOCKADDR_BTH sockaddr_bth = {};
     sockaddr_bth.addressFamily = AF_BTH;
@@ -194,7 +216,7 @@ void connect_and_send_file(BTH_ADDR device_address, const ByteArray& buffer)
     closesocket(bluetooth_socket);
 }
 
-BTH_ADDR find_device_address(void)
+void find_device_address(uint64_t* address)
 {
     BLUETOOTH_FIND_RADIO_PARAMS radio_params = {};
     radio_params.dwSize = sizeof(BLUETOOTH_FIND_RADIO_PARAMS);
@@ -206,7 +228,7 @@ BTH_ADDR find_device_address(void)
     if (!radio_find)
     {
         printf("Failed to find radio\n");
-        return 1;
+        return;
     }
 
     BLUETOOTH_DEVICE_SEARCH_PARAMS search_params = {};
@@ -229,7 +251,7 @@ BTH_ADDR find_device_address(void)
     {
         printf("No Bluetooth devices found.\n");
         BluetoothFindRadioClose(radio_find);
-        return 1;
+        return;
     }
 
     bool device_found = false;
@@ -248,69 +270,13 @@ BTH_ADDR find_device_address(void)
     BluetoothFindDeviceClose(device_find);
     BluetoothFindRadioClose(radio_find);
 
+    *address = 0;
     if (device_found)
     {
-        return device_info.Address.ullLong;
+        *address = device_info.Address.ullLong;
     }
-    return 0;
 }
 
-int main(void)
-{
-    BTH_ADDR device_address = find_device_address();
-
-    if (!glfwInit())
-    {
-        return 1;
-    }
-
-    GLFWwindow* window = glfwCreateWindow(640, 480, "Drop File", NULL, NULL);
-
-    if (!window)
-    {
-        glfwTerminate();
-        return -1;
-    }
-
-    glfwMakeContextCurrent(window);
-    gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-
-    glfwSetDropCallback(window, drop_callback);
-    imgui_initialize(window);
-
-    if (device_address != 0)
-    {
-        WSADATA wsa_data;
-        if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0)
-        {
-            return 1;
-        }
-
-        ByteArray converted_buffer = {};
-        while (!glfwWindowShouldClose(window))
-        {
-            if (parse_file)
-            {
-                uint16_t samples_to_remove = 0;
-                converted_buffer =
-                    process_audio_buffer(prompt.c_str(), 32);
-                parse_file = false;
-                send_disable = false;
-            }
-            imgui_begin_frame();
-            if(imgui_update(window))
-            {
-                connect_and_send_file(device_address, converted_buffer);
-            }
-            glfwSwapBuffers(window);
-            glfwPollEvents();
-        }
-
-        WSACleanup();
-    }
-
-    glfwTerminate();
-}
 #else
 
 #include <iostream>
@@ -334,7 +300,7 @@ using namespace Windows::Foundation;
 
 bool address_found = false;
 
-void ble_find_device_address(uint64_t* address)
+void find_device_address(uint64_t* address)
 {
     BluetoothLEAdvertisementWatcher watcher;
     watcher.ScanningMode(BluetoothLEScanningMode::Active);
@@ -348,7 +314,7 @@ void ble_find_device_address(uint64_t* address)
             std::wcout << L"Device Address: " << args.BluetoothAddress()
                        << std::endl;
 
-            if (args.Advertisement().LocalName() == L"WaveTablePP")
+            if (args.Advertisement().LocalName() == TARGET_DEVICE_NAME)
             {
                 std::wcout << L"Target device found, stopping scan..."
                            << std::endl;
@@ -360,7 +326,7 @@ void ble_find_device_address(uint64_t* address)
     watcher.Start();
 }
 
-void ble_connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
+void connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
 {
     printf("Connecting\n");
     auto device =
@@ -413,7 +379,7 @@ void ble_connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
         auto writeResult =
             target_characteristic.WriteValueAsync(write_buffer).get();
     }
-    if(remainder > 0)
+    if (remainder > 0)
     {
         uint32_t offset = chunks * chunk_size;
 
@@ -427,12 +393,15 @@ void ble_connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
 
     device.Close();
 }
+#endif
 
 int main(void)
 {
+#ifndef USE_SPP
     init_apartment();
+#endif
     uint64_t device_address = 0;
-    ble_find_device_address(&device_address);
+    find_device_address(&device_address);
 
     if (!glfwInit())
     {
@@ -453,27 +422,47 @@ int main(void)
     glfwSetDropCallback(window, drop_callback);
     imgui_initialize(window);
 
+    const char* prompt_text = "Drop File";
+    uint32_t prompt_len = (uint32_t)strlen(prompt_text);
+    array_create(&prompt, prompt_len);
+    string_copy(&prompt, prompt_text, prompt_len);
+
+#ifdef USE_SPP
+    WSADATA wsa_data;
+    if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0)
+    {
+        return 1;
+    }
+#endif
+
     ByteArray converted_buffer = {};
     while (!glfwWindowShouldClose(window))
     {
         if (parse_file)
         {
-            converted_buffer = process_audio_buffer(prompt.c_str());
+            converted_buffer = process_audio_buffer(prompt.data, 0);
             parse_file = false;
             send_disable = false;
         }
         imgui_begin_frame();
         if (imgui_update(window))
         {
-            if (device_address != 0)
+            if(device_address != 0)
             {
-                ble_connect_and_send_file(device_address, converted_buffer);
+                connect_and_send_file(device_address, converted_buffer);
+            }
+            else 
+            {
+                printf("Error: device address not found\n");
             }
         }
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+#ifdef USE_SPP
+    WSACleanup();
+#endif
+
     glfwTerminate();
 }
-#endif
