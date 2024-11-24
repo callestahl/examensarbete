@@ -37,6 +37,7 @@ class MyServerCallbacks : public BLEServerCallbacks
     {
         bluetooth_reset(&g_bluetooth);
         g_device_connected = false;
+        BLEDevice::startAdvertising();
     }
 };
 
@@ -119,14 +120,10 @@ void ble_setup(const char* name, TaskHandle_t* task_notification_handle)
 
     service->start();
 
-#if 1
     BLEAdvertising* advertising = BLEDevice::getAdvertising();
     advertising->addServiceUUID(SERVICE_UUID);
     advertising->setScanResponse(true);
-    advertising->setMinPreferred(0x06);
-    advertising->setMinPreferred(0x12);
     BLEDevice::startAdvertising();
-#endif
 }
 
 bool ble_device_is_connected(void)

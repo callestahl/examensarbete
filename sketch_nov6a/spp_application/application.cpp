@@ -1,11 +1,13 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
 #include <SPI.h>
+#include <SPIFFS.h>
 
 #include "MCP_DAC.h"
 
 #include "wave_table.h"
 #include "spp.h"
+#include "bluetooth.h"
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128
@@ -116,6 +118,13 @@ void spp_task(void* data)
             }
         }
     }
+}
+
+uint16_t file_get_uint16(File* file)
+{
+    uint8_t high = file->read();
+    uint8_t low = file->read();
+    return ((uint16_t)high << 8) | ((uint16_t)low);
 }
 
 void application_setup()
