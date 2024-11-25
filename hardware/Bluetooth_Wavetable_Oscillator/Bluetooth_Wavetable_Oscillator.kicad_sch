@@ -2652,7 +2652,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
 			(at 56.8452 50.8 0)
 			(effects
 				(font
@@ -2944,7 +2944,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Package_DIP:DIP-8_W7.62mm"
 			(at 102.87 156.21 0)
 			(effects
 				(font
@@ -3230,7 +3230,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
 			(at 90.17 138.7348 0)
 			(effects
 				(font
@@ -3699,7 +3699,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
 			(at 211.7852 67.31 0)
 			(effects
 				(font
