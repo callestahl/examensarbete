@@ -17,7 +17,7 @@
 #include "audio_processing.h"
 #include "utils.h"
 
-// #define USE_SPP
+#define USE_SPP
 
 uint64_t get_time_micro(void)
 {
@@ -160,16 +160,21 @@ typedef struct ProfileData
     uint64_t time_buffer_chunk_before[2048];
     uint64_t time_buffer_chunk_sent[2048];
 
+} ProfileData;
+
+typedef struct Profile
+{
     uint32_t total_bytes;
     uint32_t chunk_size;
     uint32_t chunks;
     uint32_t remainder;
 
-} ProfileData;
+    uint32_t count;
+    ProfileData* data;
+} Profile;
 
-void profile_data_append_to_file(ProfileData* profile_data,
-                                 const char* file_name, bool ble,
-                                 uint64_t microseconds)
+void profile_append_to_file(Profile* profile, const char* file_name, bool ble,
+                            uint64_t* microseconds, uint32_t counts)
 {
     FILE* profile_file = NULL;
     fopen_s(&profile_file, file_name, "a");
@@ -180,36 +185,76 @@ void profile_data_append_to_file(ProfileData* profile_data,
     }
 
     fprintf(profile_file, "Profiling Data for connect_and_send_file:\n\n");
-    fprintf(profile_file, "Total Bytes Sent: %u\n", profile_data->total_bytes);
-    fprintf(profile_file, "Chunk Size: %u bytes\n", profile_data->chunk_size);
-    fprintf(profile_file, "Number of Chunks Sent: %u\n", profile_data->chunks);
-    fprintf(profile_file, "Remaining Bytes: %d\n", profile_data->remainder);
-    fprintf(profile_file, "\nConnection Time: %llu microseconds\n",
-            profile_data->end_time_connect - profile_data->start_time_connect);
+    fprintf(profile_file, "Total Bytes Sent: %u\n", profile->total_bytes);
+    fprintf(profile_file, "Chunk Size: %u bytes\n", profile->chunk_size);
+    fprintf(profile_file, "Number of Chunks Sent: %u\n", profile->chunks);
+    fprintf(profile_file, "Remaining Bytes: %d\n", profile->remainder);
+
+    fprintf(profile_file, "\nConnection Time (microseconds): ");
+    for (uint32_t i = 0; i < profile->count; ++i)
+    {
+        char print_format[] = "%llu, ";
+        if (i == (profile->count - 1))
+        {
+            print_format[4] = '\0';
+        }
+        fprintf(profile_file, print_format,
+                profile->data[i].end_time_connect -
+                    profile->data[i].start_time_connect);
+    }
+
     if (ble)
     {
-        fprintf(
-            profile_file,
-            "Service and characteristic discovery time\n: %llu microseconds\n",
-            microseconds);
+        fprintf(profile_file,
+                "\nService and characteristic discovery time (microseconds): ");
+        for (uint32_t i = 0; i < counts; ++i)
+        {
+            char print_format[] = "%llu, ";
+            if (i == (counts - 1))
+            {
+                print_format[4] = '\0';
+            }
+            fprintf(profile_file, print_format, microseconds[i]);
+        }
     }
-    fprintf(profile_file, "Total Sending Time: %llu microseconds\n",
-            profile_data->end_time_sending - profile_data->start_time_sending);
-    fprintf(profile_file, "\nChunk Timing Details:\n");
+
+    fprintf(profile_file, "\nTotal Sending Time (microseconds): ");
+    for (uint32_t i = 0; i < profile->count; ++i)
+    {
+        char print_format[] = "%llu, ";
+        if (i == (profile->count - 1))
+        {
+            print_format[4] = '\0';
+        }
+        fprintf(profile_file, print_format,
+                profile->data[i].end_time_sending -
+                    profile->data[i].start_time_sending);
+    }
+
+    fprintf(profile_file, "\n\nChunk Timing Details:\n");
 
     fprintf(profile_file, "Chunk round trip times (microseconds):\n");
-    for (uint32_t j = 0; j < profile_data->time_chunk_before_count; j++)
+    for (uint32_t i = 0; i < profile->data[0].time_chunk_before_count; i++)
     {
-        fprintf(profile_file, "Chunk %u: %llu\n", j + 1,
-                profile_data->time_buffer_chunk_sent[j] -
-                    profile_data->time_buffer_chunk_before[j]);
+        fprintf(profile_file, "Chunk %u: ", i + 1);
+        for (uint32_t j = 0; j < profile->count; ++j)
+        {
+            char print_format[] = "%llu, ";
+            if (i == (profile->count - 1))
+            {
+                print_format[4] = '\0';
+            }
+            fprintf(profile_file, print_format,
+                    profile->data[j].time_buffer_chunk_sent[i] -
+                        profile->data[j].time_buffer_chunk_before[i]);
+        }
     }
 
     fprintf(profile_file, "\n----------------------------------------\n");
 
     fclose(profile_file);
 }
-#define TARGET_DEVICE_NAME L"WaveTablePP"
+#define TARGET_DEVICE_NAME L"WaveTablePP_2"
 
 #ifdef USE_SPP
 
@@ -224,10 +269,9 @@ bool wait_for_respons(SOCKET socket, uint8_t value)
     return false;
 }
 
-void connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
+void connect_and_send_file(uint64_t device_address, const ByteArray& buffer,
+                           Profile* profile, ProfileData* profile_data)
 {
-    ProfileData profile_data = {};
-
     SOCKADDR_BTH sockaddr_bth = {};
     sockaddr_bth.addressFamily = AF_BTH;
     sockaddr_bth.btAddr = device_address;
@@ -242,13 +286,13 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
 
     printf("Connecting to device ...\n");
 
-    profile_data.start_time_connect = get_time_micro();
+    profile_data->start_time_connect = get_time_micro();
     if (connect(bluetooth_socket, (SOCKADDR*)&sockaddr_bth,
                 sizeof(sockaddr_bth)) == SOCKET_ERROR)
     {
         return;
     }
-    profile_data.end_time_connect = get_time_micro();
+    profile_data->end_time_connect = get_time_micro();
 
     bool error = false;
 
@@ -256,23 +300,22 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
     uint32_t chunks = (uint32_t)buffer.size / chunk_size;
     uint32_t remainder = buffer.size % chunk_size;
 
-    profile_data.total_bytes = buffer.size;
-    profile_data.chunk_size = chunk_size;
-    profile_data.chunks = chunks;
-    profile_data.remainder = remainder;
+    profile->total_bytes = buffer.size;
+    profile->chunk_size = chunk_size;
+    profile->chunks = chunks;
+    profile->remainder = remainder;
 
     printf(
         "\nStart sending data:\n\tTotal bytes to send: %u\n\tChunk size: %u\n\tTotal chunks: %u\n",
         buffer.size, chunk_size, chunks);
 
-    profile_data.start_time_sending = get_time_micro();
+    profile_data->start_time_sending = get_time_micro();
 
     uint32_t i = 0;
     for (; i < chunks && !error; i++)
     {
-        profile_data
-            .time_buffer_chunk_before[profile_data.time_chunk_before_count++] =
-            get_time_micro();
+        profile_data->time_buffer_chunk_before
+            [profile_data->time_chunk_before_count++] = get_time_micro();
 
         int offset = i * chunk_size;
         if (send(bluetooth_socket, (char*)buffer.data + offset, chunk_size,
@@ -284,7 +327,7 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
         error = !wait_for_respons(bluetooth_socket, 0x08);
 
         profile_data
-            .time_buffer_chunk_sent[profile_data.time_chunk_sent_count++] =
+            ->time_buffer_chunk_sent[profile_data->time_chunk_sent_count++] =
             get_time_micro();
     }
     uint32_t offset = i * chunk_size;
@@ -298,7 +341,7 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
     }
     error = !wait_for_respons(bluetooth_socket, 0x06);
 
-    profile_data.end_time_sending = get_time_micro();
+    profile_data->end_time_sending = get_time_micro();
 
     if (error)
     {
@@ -309,9 +352,6 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
         printf("\nDone sending data\n");
     }
     closesocket(bluetooth_socket);
-
-    profile_data_append_to_file(&profile_data, "profile_data_spp.txt", false,
-                                0);
 }
 
 void find_device_address(uint64_t* address)
@@ -578,7 +618,7 @@ int main(void)
     {
         if (parse_file)
         {
-            converted_buffer = process_audio_buffer(prompt.data, 0);
+            converted_buffer = process_audio_buffer(prompt.data, 64);
             parse_file = false;
             send_disable = false;
         }
@@ -587,7 +627,17 @@ int main(void)
         {
             if (device_address != 0)
             {
-                connect_and_send_file(device_address, converted_buffer);
+                uint32_t iterations = 10;
+                Profile profile = { 0 };
+                profile.data =
+                    (ProfileData*)calloc(iterations, sizeof(ProfileData));
+                //for (uint32_t i = 0; i < iterations; ++i)
+                {
+                    connect_and_send_file(device_address, converted_buffer, &profile, profile.data);
+                    //Sleep(5 * 1000);
+                }
+                //profile_append_to_file(&profile, "profile_data_spp.txt", false,
+                 //                      0, 0);
             }
             else
             {
