@@ -1646,10 +1646,6 @@
 		(uuid "9dc86f2e-aaaa-471b-a98b-3b4061f8f7d6")
 	)
 	(no_connect
-		(at 109.22 83.82)
-		(uuid "a2b26df0-4cad-4e77-bf62-e21fc106f59d")
-	)
-	(no_connect
 		(at 58.42 60.96)
 		(uuid "bbd1b61d-cedb-4cff-8821-b71890aeeccf")
 	)
@@ -1670,12 +1666,18 @@
 		(uuid "dacc2791-3adc-493a-a9c6-6b99127a9f36")
 	)
 	(no_connect
-		(at 109.22 86.36)
-		(uuid "f35e859a-9b64-464f-8168-d3c199370f29")
-	)
-	(no_connect
 		(at 109.22 68.58)
 		(uuid "f574fe27-04bf-43cf-9feb-f743f025add4")
+	)
+	(wire
+		(pts
+			(xy 109.22 86.36) (xy 115.57 86.36)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "00824d88-bc5e-47f9-9137-7cc42a30ac5e")
 	)
 	(wire
 		(pts
@@ -1686,16 +1688,6 @@
 			(type default)
 		)
 		(uuid "034bf5d8-e0d6-4a9d-a99e-ac7d80e866e1")
-	)
-	(wire
-		(pts
-			(xy 109.22 76.2) (xy 116.84 76.2)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "03b6aa3e-dc64-4f14-8ed1-c2911364a1cc")
 	)
 	(wire
 		(pts
@@ -1746,6 +1738,16 @@
 			(type default)
 		)
 		(uuid "1e505831-1581-4332-8dfb-a4353b57991d")
+	)
+	(wire
+		(pts
+			(xy 111.76 82.55) (xy 111.76 83.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "23271765-975b-4158-adf0-be5b853dcbdc")
 	)
 	(wire
 		(pts
@@ -1899,16 +1901,6 @@
 	)
 	(wire
 		(pts
-			(xy 116.84 73.66) (xy 109.22 73.66)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "88dde2a0-b677-44f0-a024-4149c647cb1c")
-	)
-	(wire
-		(pts
 			(xy 95.25 153.67) (xy 104.14 153.67)
 		)
 		(stroke
@@ -1939,13 +1931,13 @@
 	)
 	(wire
 		(pts
-			(xy 116.84 76.2) (xy 116.84 77.47)
+			(xy 111.76 83.82) (xy 109.22 83.82)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "97341c94-72c7-4337-a0ea-a92756ff0bfc")
+		(uuid "9eb6889c-1d19-4258-b89d-9f2d937c7191")
 	)
 	(wire
 		(pts
@@ -1979,16 +1971,6 @@
 	)
 	(wire
 		(pts
-			(xy 116.84 72.39) (xy 120.65 72.39)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "a6ad2117-553a-4e90-9ec8-b57fbffad336")
-	)
-	(wire
-		(pts
 			(xy 53.34 53.34) (xy 55.88 53.34)
 		)
 		(stroke
@@ -2006,16 +1988,6 @@
 			(type default)
 		)
 		(uuid "bf922bab-f818-43f8-ba54-e8677a3bb376")
-	)
-	(wire
-		(pts
-			(xy 116.84 77.47) (xy 120.65 77.47)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "c5d2e663-793d-42d6-aa2a-779990f82434")
 	)
 	(wire
 		(pts
@@ -2059,6 +2031,16 @@
 	)
 	(wire
 		(pts
+			(xy 115.57 82.55) (xy 111.76 82.55)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f69873a0-2030-4eed-85f1-e3404afc0329")
+	)
+	(wire
+		(pts
 			(xy 55.88 53.34) (xy 58.42 53.34)
 		)
 		(stroke
@@ -2086,16 +2068,6 @@
 			(type default)
 		)
 		(uuid "fea4b851-d314-44eb-95eb-6153fa57557f")
-	)
-	(wire
-		(pts
-			(xy 116.84 72.39) (xy 116.84 73.66)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ff6f83b1-2b80-48cf-aa3f-aa7f5dd7b080")
 	)
 	(label "DISP_CS"
 		(at 48.26 58.42 0)
@@ -2275,7 +2247,7 @@
 	)
 	(global_label "POSITION"
 		(shape input)
-		(at 120.65 72.39 0)
+		(at 115.57 82.55 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2285,7 +2257,7 @@
 		)
 		(uuid "15e68e12-0589-4213-aac5-ec1466fefb99")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 132.2834 72.39 0)
+			(at 127.2034 82.55 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2297,7 +2269,7 @@
 	)
 	(global_label "PITCH"
 		(shape input)
-		(at 120.65 77.47 0)
+		(at 115.57 86.36 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2307,7 +2279,7 @@
 		)
 		(uuid "34eb7add-3c4c-4057-a08f-4703b1b28b93")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 129.0781 77.47 0)
+			(at 123.9981 86.36 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2652,7 +2624,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
 			(at 56.8452 50.8 0)
 			(effects
 				(font
@@ -2944,7 +2916,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Package_DIP:DIP-8_W7.62mm"
 			(at 102.87 156.21 0)
 			(effects
 				(font
@@ -3230,7 +3202,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
 			(at 90.17 138.7348 0)
 			(effects
 				(font
@@ -3699,7 +3671,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
 			(at 211.7852 67.31 0)
 			(effects
 				(font

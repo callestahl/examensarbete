@@ -2836,7 +2836,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_THT:CP_Radial_D5.0mm_P2.50mm"
 			(at 103.8352 78.74 0)
 			(effects
 				(font
@@ -2906,7 +2906,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_THT:CP_Radial_D5.0mm_P2.50mm"
 			(at 103.8352 63.5 0)
 			(effects
 				(font
@@ -3044,7 +3044,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
 			(at 121.6152 63.5 0)
 			(effects
 				(font
@@ -3246,7 +3246,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "10_pin_eurorack_connector:10_pin_eurorack_connector"
 			(at 64.77 78.74 0)
 			(effects
 				(font
@@ -3341,7 +3341,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
 			(at 82.2452 132.08 0)
 			(effects
 				(font
@@ -3411,7 +3411,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
 			(at 121.6152 78.74 0)
 			(effects
 				(font
@@ -3548,7 +3548,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_THT:C_Disc_D5.0mm_W2.5mm_P5.00mm"
 			(at 106.3752 132.08 0)
 			(effects
 				(font
@@ -3817,7 +3817,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Package_TO_SOT_THT:TO-220-3_Horizontal_TabDown"
 			(at 94.615 128.27 0)
 			(effects
 				(font
