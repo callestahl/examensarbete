@@ -6,7 +6,9 @@
 #include <freertos/task.h>
 #include <freertos/semphr.h>
 
-void spp_setup(const char* name, TaskHandle_t* task_notification_handle, uint32_t queue_size);
+void spp_setup(TaskHandle_t* task_notification_handle, uint32_t queue_size);
+void spp_begin(const char* name);
+void spp_end(void);
 bool spp_look_for_incoming_messages(WaveTableOscillator* oscilator, SemaphoreHandle_t mutex, SemaphoreHandle_t mutex_screen);
 
 #endif

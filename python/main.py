@@ -95,40 +95,42 @@ class BLEApp:
 
     async def send_file(self):
         try:
+            print("start")
             async with BleakClient(self.device_address) as client:
-                mtu_size = client.mtu_size
-                chunk_size = min(mtu_size - 3, 512) # -3 ATT header, 512 max Bluetooth spec p. 1485
-                print(f"Chunk Size: {chunk_size}")
+                print("connected")
+                #mtu_size = client.mtu_size
+                #chunk_size = min(mtu_size - 3, 512) # -3 ATT header, 512 max Bluetooth spec p. 1485
+                #print(f"Chunk Size: {chunk_size}")
 
-                characteristic_uuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-                sound_buffer_len = len(self.sound_buffer);
-                if sound_buffer_len % 2 != 0:
-                    print("Error: Sound file are not even");
-                    return;
+                #characteristic_uuid = "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+                #sound_buffer_len = len(self.sound_buffer);
+                #if sound_buffer_len % 2 != 0:
+                #    print("Error: Sound file are not even");
+                #    return;
 
-                chunks = sound_buffer_len // chunk_size;
-                remainder = sound_buffer_len % chunk_size;
+                #chunks = sound_buffer_len // chunk_size;
+                #remainder = sound_buffer_len % chunk_size;
 
-                for i in range(chunks):
-                    offset = chunk_size * i
-                    await client.write_gatt_char(
-                        characteristic_uuid,
-                        self.sound_buffer[offset:offset + chunk_size],
-                        response=True 
-                    )
+                #for i in range(chunks):
+                #    offset = chunk_size * i
+                #    await client.write_gatt_char(
+                #        characteristic_uuid,
+                #        self.sound_buffer[offset:offset + chunk_size],
+                #        response=True 
+                #    )
 
-                if remainder > 0:
-                    await client.write_gatt_char(
-                        characteristic_uuid,
-                        self.sound_buffer[chunks * chunk_size:],
-                        response=True
-                    )
+                #if remainder > 0:
+                #    await client.write_gatt_char(
+                #        characteristic_uuid,
+                #        self.sound_buffer[chunks * chunk_size:],
+                #        response=True
+                #    )
 
-                done_message = "DONE"
-                await client.write_gatt_char(
-                        characteristic_uuid,
-                        done_message.encode('utf-8')
-                )
+                #done_message = "DONE"
+                #await client.write_gatt_char(
+                #        characteristic_uuid,
+                #        done_message.encode('utf-8')
+                #)
 
 
                 print("File transferred successfully!")
