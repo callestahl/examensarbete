@@ -6,3 +6,8 @@ Graph buffersize in relation to time
 
 adc2 on esp32 is for Bluetooth and wifi, and using pins close to them get more noise to them
 
+Power noise from oled screen to DAC
+
+
+
+

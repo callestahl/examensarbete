@@ -2,6 +2,7 @@
 #include "utils.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <dr_wav/dr_wav.h>
 
@@ -214,10 +215,19 @@ ByteArray process_audio_buffer(const char* file_name,
     array_create(&local_minima, 100);
     find_local_minima(&local_minima, smoothed,
                       (int32_t)shift_avg_difference.size);
+    ByteArray result = {};
+    if(local_minima.size <= 1)
+    {
+        printf("Error: local_minima\n");
+        return result;
+    }
 
     uint16_t samples_per_cycle = calculate_samples_per_cycle(local_minima);
     uint16_t total_cycles =
         (uint16_t)(audio_buffer.size / (uint64_t)samples_per_cycle);
+
+    printf("Samples per cycle: %u\n", samples_per_cycle);
+    printf("Total cycles: %u\n", total_cycles);
 
     audio_buffer.size -=
         ((total_cycles - total_cycles_to_send) * samples_per_cycle) *
@@ -256,7 +266,6 @@ ByteArray process_audio_buffer(const char* file_name,
         total_bytes_low1,
     };
 
-    ByteArray result = {};
     result.size = total_bytes;
     result.data = (uint8_t*)calloc(total_bytes, sizeof(uint8_t));
 
@@ -276,6 +285,8 @@ ByteArray process_audio_buffer(const char* file_name,
     array_free(&local_minima);
     array_free(&shift_avg_difference);
     free(smoothed);
+
+    printf("Total bytes: %u\n", result.size - header_size);
 
     return result;
 }

@@ -178,17 +178,13 @@ void on_spp_data_receive_cb(const uint8_t* data, size_t size)
     }
 }
 
-void spp_setup(const char* name, TaskHandle_t* task_notification_handle,
-               uint32_t queue_size)
+void spp_setup(TaskHandle_t* task_notification_handle, uint32_t queue_size)
 {
     if (!g_spp.initialized)
     {
         g_spp.task_notification_handle = task_notification_handle;
         g_spp.queue_size = queue_size;
         g_spp.queue = xQueueCreate(queue_size, sizeof(uint8_t));
-        g_spp.bluetooth_serial.onData(on_spp_data_receive_cb);
-        g_spp.bluetooth_serial.begin(name);
-        g_spp.bluetooth_serial.enableSSP();
         g_spp.initialized = true;
         g_spp.time_before_reset = 500;
         g_temp_osci.tables_capacity = 256;
@@ -199,6 +195,19 @@ void spp_setup(const char* name, TaskHandle_t* task_notification_handle,
     {
         // TODO(Linus): Logging
     }
+}
+
+void spp_begin(const char* name)
+{
+    g_spp.bluetooth_serial.begin(name, false, true);
+    g_spp.bluetooth_serial.enableSSP();
+    g_spp.bluetooth_serial.onData(on_spp_data_receive_cb);
+}
+
+void spp_end(void)
+{
+    g_spp.bluetooth_serial.end();
+    g_spp.bluetooth_serial.disableSSP();
 }
 
 bool spp_is_complete(WaveTableOscillator* oscillator, SemaphoreHandle_t mutex,
