@@ -5,7 +5,7 @@
 	(uuid "fda99055-d953-4203-b673-64a5e6540552")
 	(paper "A4")
 	(title_block
-		(title "Microcontroller, DAC, Display")
+		(title "Microcontroller, DAC, Display, BTH Switch/LED")
 		(date "2024-11-18")
 		(rev "1")
 	)
@@ -3021,7 +3021,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "1.5inch_RGB_OLED_Module:1.5inch_RGB_OLED_Module"
 			(at 232.41 72.39 0)
 			(effects
 				(font
@@ -3307,7 +3307,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "ESP32:ESP32"
 			(at 83.82 96.52 0)
 			(effects
 				(font
@@ -3524,7 +3524,7 @@
 				)
 			)
 		)
-		(property "Value" "R"
+		(property "Value" "220R"
 			(at 234.95 135.89 90)
 			(effects
 				(font
@@ -3532,7 +3532,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P2.54mm_Vertical"
 			(at 234.95 141.478 90)
 			(effects
 				(font
@@ -3886,7 +3886,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Diode_THT:D_A-405_P2.54mm_Vertical_AnodeUp"
 			(at 222.25 139.7 0)
 			(effects
 				(font
@@ -4421,7 +4421,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "6Pin-Switch-Button:6Pin-Switch-Button"
 			(at 222.25 115.57 0)
 			(effects
 				(font
