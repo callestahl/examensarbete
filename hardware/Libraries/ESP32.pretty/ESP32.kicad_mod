@@ -1,0 +1,93 @@
+(footprint "ESP32"
+	(version 20240108)
+	(generator "pcbnew")
+	(generator_version "8.0")
+	(layer "F.Cu")
+	(property "Reference" "REF**"
+		(at 13.18 -56.89 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "7c5c68a5-3b13-486a-8379-7360855e1699")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "ESP32"
+		(at 13.18 -55.39 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "99e6db2d-a305-4e13-8a00-cb22cc8f1598")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Footprint" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "91386aac-ee02-4349-85ee-d295dc761901")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "ce0a7333-7175-4a05-9205-28622bae30d4")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "4754ff13-3d87-4c71-960f-a7cbd66f169c")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole)
+	(fp_rect
+		(start 0 0)
+		(end 28 -52)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(fill none)
+		(layer "F.SilkS")
+		(uuid "325aa51f-cb7c-48dd-8837-163359844657")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 13.18 -53.89 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "e0d6bb56-7489-4b10-84aa-25655563bb4a")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+)
