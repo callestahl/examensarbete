@@ -36,7 +36,7 @@ struct SPP
     uint64_t time_before_reset;
 };
 
-global WaveTableOscillator g_temp_osci = { 0 };
+global WaveTableOscillator* g_temp_osci = NULL;
 global SPP g_spp;
 global uint32_t g_chunk_bytes = 0;
 
@@ -72,7 +72,6 @@ internal bool spp_has_timed_out(uint64_t start_time, uint64_t time_to_timeout)
         g_spp.bytes_to_received = 0;
         bluetooth_reset(&g_spp.bluetooth);
         spp_clear_buffer();
-        wave_table_oscilator_clean(&g_temp_osci);
         g_spp.bluetooth_serial.write(BLUETOOTH_ERROR_CODE);
         return true;
     }
@@ -95,7 +94,6 @@ internal void spp_revert_transaction()
     g_spp.bytes_to_received = 0;
     bluetooth_reset(&g_spp.bluetooth);
     spp_clear_buffer();
-    wave_table_oscilator_clean(&g_temp_osci);
     g_spp.bluetooth_serial.write(BLUETOOTH_ERROR_CODE);
 }
 
@@ -110,8 +108,12 @@ internal bool spp_read_header()
     if (id0 == 29960 && id1 == 62903 && id2 == 35185 && id3 == 26662)
     {
         uint16_t cycle_sample_count = spp_get_uint16();
-        g_temp_osci.samples_per_cycle = cycle_sample_count;
-        g_temp_osci.total_cycles = 0;
+        if(g_temp_osci->total_cycles)
+        {
+            wave_table_oscilator_clean(g_temp_osci);
+        }
+        g_temp_osci->samples_per_cycle = cycle_sample_count;
+        g_temp_osci->total_cycles = 0;
         g_spp.bluetooth.header_read = true;
         g_spp.bluetooth.table_index = 0;
         g_spp.bluetooth.sample_index = 0;
@@ -151,7 +153,7 @@ internal bool spp_process_sample()
     // if (key == spp_sample_key(sample))
     {
         BluetoothSampleProcessCode code =
-            bluetooth_process_sample(&g_spp.bluetooth, sample, &g_temp_osci);
+            bluetooth_process_sample(&g_spp.bluetooth, sample, g_temp_osci);
         if (code == SAMPLE_PROCESS_ERROR)
         {
             return false;
@@ -187,9 +189,11 @@ void spp_setup(TaskHandle_t* task_notification_handle, uint32_t queue_size)
         g_spp.queue = xQueueCreate(queue_size, sizeof(uint8_t));
         g_spp.initialized = true;
         g_spp.time_before_reset = 500;
+#if 0
         g_temp_osci.tables_capacity = 256;
         g_temp_osci.tables =
             (WaveTable*)calloc(g_temp_osci.tables_capacity, sizeof(WaveTable));
+#endif
     }
     else
     {
@@ -210,8 +214,9 @@ void spp_end(void)
     g_spp.bluetooth_serial.disableSSP();
 }
 
-bool spp_is_complete(WaveTableOscillator* oscillator, SemaphoreHandle_t mutex,
-                     SemaphoreHandle_t mutex_screen)
+BluetoothCode spp_is_complete(WaveTableOscillator* oscillator,
+                              SemaphoreHandle_t mutex,
+                              SemaphoreHandle_t mutex_screen)
 {
 
     if (g_spp.bluetooth.reading_samples)
@@ -219,7 +224,7 @@ bool spp_is_complete(WaveTableOscillator* oscillator, SemaphoreHandle_t mutex,
         if (spp_has_timed_out(g_spp.last_read_value_time,
                               g_spp.time_before_reset))
         {
-            return false;
+            return BLUETOOTH_ERROR;
         }
         if (g_spp.bytes_received == g_spp.bytes_to_received)
         {
@@ -228,44 +233,51 @@ bool spp_is_complete(WaveTableOscillator* oscillator, SemaphoreHandle_t mutex,
             g_spp.bytes_to_received = 0;
             bluetooth_reset(&g_spp.bluetooth);
             g_spp.bluetooth_serial.write(BLUETOOTH_FINISHED_CODE);
-            if (g_temp_osci.total_cycles > 0)
+            if (g_temp_osci->total_cycles > 0)
             {
                 if (xSemaphoreTake(mutex, portMAX_DELAY))
                 {
                     if (xSemaphoreTake(mutex_screen, portMAX_DELAY))
                     {
+#if 0
                         wave_table_oscilator_clean(oscillator);
                         WaveTableOscillator temp = *oscillator;
                         *oscillator = g_temp_osci;
                         g_temp_osci = temp;
+#endif
                         xSemaphoreGive(mutex_screen);
                     }
                     xSemaphoreGive(mutex);
                 }
-                return true;
+                return BLUETOOTH_DONE;
             }
         }
     }
-    return false;
+    return BLUETOOTH_OK;
 }
 
-bool spp_look_for_incoming_messages(WaveTableOscillator* oscillator,
-                                    SemaphoreHandle_t mutex,
-                                    SemaphoreHandle_t mutex_screen)
+BluetoothCode spp_look_for_incoming_messages(WaveTableOscillator* oscillator,
+                                             SemaphoreHandle_t mutex,
+                                             SemaphoreHandle_t mutex_screen)
 {
     const uint64_t start_time = millis();
     const uint64_t time_to_timeout = 500;
 
-    while (spp_data_in_queue() &&
-           !spp_has_timed_out(start_time, time_to_timeout))
+    g_temp_osci = oscillator;
+
+    while (spp_data_in_queue())
     {
+        if(spp_has_timed_out(start_time, time_to_timeout))
+        {
+            return BLUETOOTH_ERROR;
+        }
         if (!g_spp.bluetooth.header_read)
         {
             if (spp_data_in_queue() >= sizeof(BluetoothHeader))
             {
                 if (!spp_read_header())
                 {
-                    break;
+                    return BLUETOOTH_ERROR;
                 }
             }
         }
@@ -276,13 +288,12 @@ bool spp_look_for_incoming_messages(WaveTableOscillator* oscillator,
                 if (!spp_process_sample())
                 {
                     spp_revert_transaction();
-                    break;
+                    return BLUETOOTH_ERROR;
                 }
             }
             g_spp.bluetooth.reading_samples = true;
         }
         g_spp.last_read_value_time = millis();
     }
-
     return spp_is_complete(oscillator, mutex, mutex_screen);
 }

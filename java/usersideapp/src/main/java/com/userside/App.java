@@ -149,7 +149,7 @@ public class App extends Application {
         LineChart<Number,Number> lineChart = new LineChart<Number,Number>(xAxis,yAxis);
         lineChart.setCreateSymbols(false);
         XYChart.Series<Number,Number> series = new XYChart.Series<>();
-        for(int i = 0; i < 150 * 4; ++i) {
+        for(int i = 0; i < values.size(); ++i) {
             series.getData().add(new XYChart.Data<>(i, values.get(i + offset)));
         }
         lineChart.getData().add(series);

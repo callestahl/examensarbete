@@ -54,7 +54,7 @@ public class WavFileProcessor {
                         total_difference += Math.abs(normalizedBuffer[j] - normalizedBuffer[j + shift]);
                     }
                     float avg = total_difference / (normalizedBuffer.length - shift);
-                    if(avg > 0.001f) {
+                    if(avg > 0.00001f) {
                         shiftAvgDifference.add(avg);
                     }
                 }
@@ -137,6 +137,12 @@ public class WavFileProcessor {
             }
             if(!jump) {
                 smallestIndex.add(j);
+                int lastMinima = smallestIndex.get(smallestIndex.size() - 2);
+                int currentMinima = smallestIndex.get(smallestIndex.size() - 1);
+                int periodEstimate = currentMinima - lastMinima;
+
+                // Adjust scanCount to focus on expected periodicity
+                scanCount = Math.max(periodEstimate / 2, 10);
             }
         }
         return smallestIndex;

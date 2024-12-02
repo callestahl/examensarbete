@@ -1,5 +1,5 @@
 REM arduino-cli compile --fqbn esp32:esp32:esp32da .\sketch_nov6a\wifi_application --build-path=build --only-compilation-database
-arduino-cli compile --build-property build.partitions=huge_app --fqbn esp32:esp32:esp32da .\sketch_nov6a\spp_application
+arduino-cli compile --fqbn esp32:esp32:esp32da .\sketch_nov6a\ble_application
 
 IF %errorlevel% EQU 0 (
     echo Build Completed Successfully 

@@ -70,18 +70,18 @@ static AudioBuffer get_sample_data(const char* file_name)
 static void average_magnitude_difference(const AudioBuffer& audio_buffer,
                                          FloatArray* shift_avg_difference)
 {
-    int max_shift = (int)audio_buffer.sample_rate / 20;
+    int32_t max_shift = (int32_t)audio_buffer.sample_rate / 20;
     array_create(shift_avg_difference, max_shift);
-    for (int shift = 0; shift < max_shift; shift++)
+    for (int32_t shift = 0; shift < max_shift; shift++)
     {
         float total_difference = 0;
-        for (int j = shift; j < max_shift - shift; j++)
+        for (int32_t j = shift; j < max_shift - shift; j++)
         {
             total_difference += abs_float(
                 (audio_buffer.data[j] - audio_buffer.data[j + shift]));
         }
         float avg = total_difference / (audio_buffer.size - shift);
-        if (avg > 0.001f)
+        if (avg > 0.00001f)
         {
             array_append(shift_avg_difference, avg);
         }
@@ -108,16 +108,16 @@ static float* smooth_avg_difference(const FloatArray& shift_avg_difference,
 }
 
 static void find_local_minima(Uint32Array* local_minima, float* smooth,
-                              int size)
+                              int32_t size)
 {
-    int scan_count = size / 10;
-    for (int j = 0; j < size; ++j)
+    int32_t scan_count = max_int(size / 10, 10);
+    for (int32_t j = 0; j < size; ++j)
     {
         bool jump = false;
-        for (int h = 1; h <= scan_count; ++h)
+        for (int32_t h = 1; h <= scan_count; ++h)
         {
-            int rightIndex = j + h;
-            int leftIndex = j - h;
+            int32_t rightIndex = j + h;
+            int32_t leftIndex = j - h;
             if (leftIndex >= 0)
             {
                 if (smooth[leftIndex] < smooth[j])
@@ -138,6 +138,15 @@ static void find_local_minima(Uint32Array* local_minima, float* smooth,
         if (!jump)
         {
             array_append(local_minima, (uint32_t)j);
+
+            if (local_minima->size > 1)
+            {
+                int32_t last_minima = local_minima->data[local_minima->size - 2];
+                int32_t current_minima = local_minima->data[local_minima->size - 1];
+                int32_t period = current_minima - last_minima;
+
+                scan_count = max_int(period / 2, 10);
+            }
         }
     }
 }
@@ -216,7 +225,7 @@ ByteArray process_audio_buffer(const char* file_name,
     find_local_minima(&local_minima, smoothed,
                       (int32_t)shift_avg_difference.size);
     ByteArray result = {};
-    if(local_minima.size <= 1)
+    if (local_minima.size <= 1)
     {
         printf("Error: local_minima\n");
         return result;

@@ -2,6 +2,7 @@
 #include <Adafruit_SSD1351.h>
 #include <SPI.h>
 #include <SPIFFS.h>
+#include <esp_heap_caps.h>
 
 #include "wave_table.h"
 #include "spp.h"
@@ -118,6 +119,17 @@ void redraw_screen_task(void* data)
     }
 }
 
+void print_heap_size(void)
+{
+    size_t heap_size = esp_get_free_heap_size();
+
+    display.fillScreen(SSD1351_BLACK);
+    display.setCursor(0, 0);
+    display.println(heap_size);
+    display.println(osci.total_cycles);
+    display.println(osci.samples_per_cycle);
+}
+
 static TaskHandle_t g_spp_task_handle = NULL;
 
 void spp_task(void* data)
@@ -125,18 +137,26 @@ void spp_task(void* data)
     while (true)
     {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        if (spp_look_for_incoming_messages(&osci, g_oscillator_mutex,
-                                           g_oscillator_screen_mutex))
+
+        BluetoothCode bluetooth_code = spp_look_for_incoming_messages(
+            &osci, g_oscillator_mutex, g_oscillator_screen_mutex);
+
+        if (bluetooth_code == BLUETOOTH_DONE)
         {
             wave_table_oscilator_write_to_file(&osci);
 
-            turn_off_bluetooth();
+            // turn_off_bluetooth();
+            print_heap_size();
 
             display_wave_index = 0;
             if (g_redraw_screen_task_handle != NULL)
             {
                 xTaskNotifyGive(g_redraw_screen_task_handle);
             }
+        }
+        else if (bluetooth_code == BLUETOOTH_ERROR)
+        {
+            wave_table_oscilator_read_from_file(&osci);
         }
     }
 }
@@ -149,13 +169,6 @@ void turn_off_bluetooth(void)
     digitalWrite(BLUETOOTH_LIGHT_PIN, LOW);
 }
 
-uint16_t file_get_uint16(File* file)
-{
-    uint8_t high = file->read();
-    uint8_t low = file->read();
-    return ((uint16_t)high << 8) | ((uint16_t)low);
-}
-
 void application_setup()
 {
     Serial.begin(115200);
@@ -166,6 +179,7 @@ void application_setup()
 
     pinMode(BLUETOOTH_BUTTON_PIN, INPUT_PULLUP);
     pinMode(BLUETOOTH_LIGHT_PIN, OUTPUT);
+    digitalWrite(BLUETOOTH_LIGHT_PIN, LOW);
 
     pinMode(PIN_PITCH_INPUT, INPUT);
     pinMode(PIN_WAVETABLE_POSITION, INPUT);
@@ -187,42 +201,34 @@ void application_setup()
     g_oscillator_screen_mutex = xSemaphoreCreateMutex();
 
     spp_setup(&g_spp_task_handle, SPP_QUEUE_SIZE);
+    spp_begin("WaveTablePP_2");
+    digitalWrite(BLUETOOTH_LIGHT_PIN, HIGH);
+    bluetooth_enabled = true;
 
     osci.tables_capacity = 256;
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
 
-    File file = SPIFFS.open("/osci.txt", FILE_READ);
+#if 0
+    wave_table_oscilator_read_from_file(&osci);
 
-    if (file && file.available())
-    {
-        uint16_t cycle_sample_count = file_get_uint16(&file);
-        osci.samples_per_cycle = cycle_sample_count;
-        Bluetooth bluetooth = { 0 };
-        while (file.available())
-        {
-            uint16_t sample = file_get_uint16(&file);
-            bluetooth_process_sample(&bluetooth, sample, &osci);
-        }
-        display.fillScreen(SSD1351_BLACK);
-        // redraw_screen(0, MAX_16BIT_VALUE);
+    osci.tables[osci.total_cycles++].samples =
+        (uint16_t*)calloc(osci.samples_per_cycle, sizeof(uint16_t));
+    osci.tables[osci.total_cycles++].samples =
+        (uint16_t*)calloc(osci.samples_per_cycle, sizeof(uint16_t));
+    osci.tables[osci.total_cycles++].samples =
+        (uint16_t*)calloc(osci.samples_per_cycle, sizeof(uint16_t));
+    osci.tables[osci.total_cycles++].samples =
+        (uint16_t*)calloc(osci.samples_per_cycle, sizeof(uint16_t));
+    osci.tables[osci.total_cycles++].samples =
+        (uint16_t*)calloc(osci.samples_per_cycle, sizeof(uint16_t));
+#endif
 
-        file.close();
-    }
-    osci.tables[osci.total_cycles++].samples =
-        (uint16_t*)calloc(osci.samples_per_cycle, sizeof(uint16_t));
-    osci.tables[osci.total_cycles++].samples =
-        (uint16_t*)calloc(osci.samples_per_cycle, sizeof(uint16_t));
-    osci.tables[osci.total_cycles++].samples =
-        (uint16_t*)calloc(osci.samples_per_cycle, sizeof(uint16_t));
-    osci.tables[osci.total_cycles++].samples =
-        (uint16_t*)calloc(osci.samples_per_cycle, sizeof(uint16_t));
-    osci.tables[osci.total_cycles++].samples =
-        (uint16_t*)calloc(osci.samples_per_cycle, sizeof(uint16_t));
-
-    xTaskCreatePinnedToCore(redraw_screen_task, "Screen Redraw", STACK_SIZE,
-                            NULL, 1, &g_redraw_screen_task_handle, 0);
+    // xTaskCreatePinnedToCore(redraw_screen_task, "Screen Redraw", STACK_SIZE,
+    //                        NULL, 1, &g_redraw_screen_task_handle, 0);
     xTaskCreatePinnedToCore(spp_task, "SPP messages", STACK_SIZE, NULL, 1,
                             &g_spp_task_handle, 0);
+
+    print_heap_size();
 }
 
 void application_loop()
@@ -233,6 +239,7 @@ void application_loop()
         if (!bluetooth_enabled)
         {
             hspi.end();
+            wave_table_oscilator_write_to_file(&osci);
             spp_begin("WaveTablePP_2");
             digitalWrite(BLUETOOTH_LIGHT_PIN, HIGH);
             bluetooth_enabled = true;

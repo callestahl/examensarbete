@@ -164,7 +164,7 @@ typedef struct ProfileData
 
 typedef struct Profile
 {
-    uint32_t total_bytes;
+    uint64_t total_bytes;
     uint32_t chunk_size;
     uint32_t chunks;
     uint32_t remainder;
@@ -174,7 +174,8 @@ typedef struct Profile
 } Profile;
 
 void profile_append_to_file(Profile* profile, const char* file_name,
-                            const char* file_name_formatted)
+                            const char* file_name_formatted,
+                            uint32_t run_offset)
 {
     FILE* profile_file = NULL;
     fopen_s(&profile_file, file_name, "a");
@@ -185,7 +186,7 @@ void profile_append_to_file(Profile* profile, const char* file_name,
     }
 
     fprintf(profile_file, "Profiling Data for connect_and_send_file:\n\n");
-    fprintf(profile_file, "Total Bytes Sent: %u\n", profile->total_bytes);
+    fprintf(profile_file, "Total Bytes Sent: %llu\n", profile->total_bytes);
     fprintf(profile_file, "Chunk Size: %u bytes\n", profile->chunk_size);
     fprintf(profile_file, "Number of Chunks Sent: %u\n", profile->chunks);
     fprintf(profile_file, "Remaining Bytes: %d\n", profile->remainder);
@@ -245,7 +246,8 @@ void profile_append_to_file(Profile* profile, const char* file_name,
     fseek(profile_file, 0, SEEK_END);
     if (ftell(profile_file) == 0)
     {
-        fprintf(profile_file, "Run,Total Sending Time (microseconds)\n");
+        fprintf(profile_file,
+                "Run,Protocol,Size,Total Sending Time (microseconds)\n");
     }
 
     for (uint32_t i = 0; i < profile->count; ++i)
@@ -253,7 +255,8 @@ void profile_append_to_file(Profile* profile, const char* file_name,
         uint64_t sending_time = profile->data[i].end_time_sending -
                                 profile->data[i].start_time_sending;
 
-        fprintf(profile_file, "Classic,%u,%llu\n", i + 1, sending_time);
+        fprintf(profile_file, "%u,Classic,%llu,%llu\n", run_offset + (i + 1),
+                profile->total_bytes, sending_time);
     }
     fclose(profile_file);
 }
@@ -332,7 +335,6 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer,
         profile_data
             ->time_buffer_chunk_sent[profile_data->time_chunk_sent_count++] =
             get_time_micro();
-        printf("Chunk\n");
     }
     uint32_t offset = i * chunk_size;
     if (!error && remainder > 0)
@@ -343,7 +345,6 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer,
             return;
         }
     }
-    printf("Remainder\n");
     error = !wait_for_respons(bluetooth_socket, 0x06);
 
     profile_data->end_time_sending = get_time_micro();
@@ -593,6 +594,7 @@ int main(void)
         return -1;
     }
 
+    glfwSwapInterval(1);
     glfwMakeContextCurrent(window);
     gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
@@ -612,12 +614,14 @@ int main(void)
     }
 #endif
 
+    uint32_t run = 200;
+
     ByteArray converted_buffer = {};
     while (!glfwWindowShouldClose(window))
     {
         if (parse_file)
         {
-            converted_buffer = process_audio_buffer(prompt.data, 32);
+            converted_buffer = process_audio_buffer(prompt.data, 0);
             parse_file = false;
             send_disable = false;
         }
@@ -627,25 +631,29 @@ int main(void)
             if (device_address != 0)
             {
                 uint32_t sleep_millis = 5 * 1000;
-                uint32_t iterations = 20;
+                uint32_t iterations = 50;
                 Profile profile = { 0 };
                 profile.data =
                     (ProfileData*)calloc(iterations, sizeof(ProfileData));
-                //  for (uint32_t i = 0; i < iterations; ++i)
+                uint32_t run_offset = run;
+                for (uint32_t i = 0; i < iterations; ++i)
                 {
-                    // printf("Test Iteration: [%u/%u]\n", (i + 1), iterations);
+                    printf("Test Iteration: [%u/%u]\n", (run++) + 1,
+                           run_offset + iterations);
                     connect_and_send_file(device_address, converted_buffer,
-                                          &profile, profile.data);
-                    //  if (i < (iterations - 1))
+                                          &profile, profile.data + i);
+                    if (i < (iterations - 1))
                     {
-                        // printf("Sleep for: %u seconds\n", sleep_millis /
-                        // 1000); Sleep(sleep_millis);
+                        printf("Sleep for: %u seconds\n", sleep_millis / 1000);
+                        Sleep(sleep_millis);
                     }
                 }
-                // profile.count = iterations;
-                // printf("Test Done!\n");
-                // profile_append_to_file(&profile, "profile_data_spp.txt",
-                //                      "profile_data_spss.txt");
+                profile.count = iterations;
+                printf("Test Done!\n");
+                profile_append_to_file(&profile, "profile_data_spp.txt",
+                                       "profile_data_spss.txt", run_offset);
+
+                free(profile.data);
             }
             else
             {

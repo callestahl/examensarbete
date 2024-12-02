@@ -16,6 +16,12 @@ enum BluetoothSampleProcessCode {
     SAMPLE_PROCESS_ERROR,
 };
 
+enum BluetoothCode {
+    BLUETOOTH_OK,
+    BLUETOOTH_DONE,
+    BLUETOOTH_ERROR,
+};
+
 void bluetooth_reset(Bluetooth* bluetooth);
 BluetoothSampleProcessCode bluetooth_process_sample(Bluetooth* bluetooth, uint16_t sample, WaveTableOscillator* oscilator);
 
