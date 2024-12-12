@@ -18,7 +18,7 @@ global Bluetooth g_bluetooth = { 0 };
 global bool g_header_read = false;
 global uint32_t g_table_index = 0;
 global uint32_t g_sample_index = 0;
-global WaveTableOscillator g_temp_osci = { 0 };
+global WaveTableOscillator* g_temp_osci = NULL;
 
 global uint64_t g_read_bytes = 0;
 global uint64_t g_bytes_to_read = 0;
@@ -54,8 +54,8 @@ void ble_read_header(uint8_t* data)
     g_bytes_to_read = 0;
 
     uint16_t cycle_sample_count = ble_get_uint16(data, 8);
-    g_temp_osci.samples_per_cycle = cycle_sample_count;
-    g_temp_osci.total_cycles = 0;
+    g_temp_osci->samples_per_cycle = cycle_sample_count;
+    g_temp_osci->total_cycles = 0;
     g_bluetooth.header_read = true;
 
     uint16_t bytes_to_received_high = ble_get_uint16(data, 10);
@@ -84,7 +84,7 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
             for (; i < length; i += 2)
             {
                 uint16_t sample = ble_get_uint16(data, i);
-                bluetooth_process_sample(&g_bluetooth, sample, &g_temp_osci);
+                bluetooth_process_sample(&g_bluetooth, sample, g_temp_osci);
             }
         }
         g_read_bytes += length;
@@ -99,13 +99,12 @@ class MyCharacteristicCallbacks : public BLECharacteristicCallbacks
     }
 };
 
-void ble_setup(const char* name, TaskHandle_t* task_notification_handle)
+void ble_setup(const char* name, TaskHandle_t* task_notification_handle,
+               WaveTableOscillator* oscillator)
 {
-    g_temp_osci.tables_capacity = 256;
-    g_temp_osci.tables =
-        (WaveTable*)calloc(g_temp_osci.tables_capacity, sizeof(WaveTable));
-
     g_task_notification_handle = task_notification_handle;
+
+    g_temp_osci = oscillator;
 
     BLEDevice::init(name);
     BLEServer* server = BLEDevice::createServer();
@@ -134,10 +133,11 @@ bool ble_device_is_connected(void)
 bool ble_copy_transfer(WaveTableOscillator* oscillator, SemaphoreHandle_t mutex,
                        SemaphoreHandle_t mutex_screen)
 {
-    
+
     if ((!g_bluetooth.reading_samples || !g_device_connected) &&
-        g_temp_osci.total_cycles != 0 && (g_read_bytes == g_bytes_to_read))
+        g_temp_osci->total_cycles != 0 && (g_read_bytes == g_bytes_to_read))
     {
+#if 0
         if (xSemaphoreTake(mutex, portMAX_DELAY))
         {
             if (xSemaphoreTake(mutex_screen, portMAX_DELAY))
@@ -150,6 +150,7 @@ bool ble_copy_transfer(WaveTableOscillator* oscillator, SemaphoreHandle_t mutex,
             }
             xSemaphoreGive(mutex);
         }
+#endif
         return true;
     }
     return false;

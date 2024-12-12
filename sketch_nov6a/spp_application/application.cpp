@@ -44,7 +44,7 @@
 #define SSD1351_BLUE RGB565(0, 0, 31)
 
 #define STACK_SIZE 4096
-#define SPP_QUEUE_SIZE 4096
+#define SPP_QUEUE_SIZE 16384
 
 #define BLUETOOTH_BUTTON_PIN 4
 #define BLUETOOTH_LIGHT_PIN 22
@@ -106,7 +106,7 @@ void redraw_screen_task(void* data)
     while (true)
     {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        if (osci.total_cycles > 0)
+        if (bluetooth_enabled || osci.total_cycles > 0)
         {
             uint16_t cycle_to_draw = g_selected_cycle;
             if (xSemaphoreTake(g_oscillator_screen_mutex, portMAX_DELAY))
@@ -143,15 +143,14 @@ void spp_task(void* data)
 
         if (bluetooth_code == BLUETOOTH_DONE)
         {
-            wave_table_oscilator_write_to_file(&osci);
+            // wave_table_oscilator_write_to_file(&osci);
 
             // turn_off_bluetooth();
-            print_heap_size();
 
             display_wave_index = 0;
-            if (g_redraw_screen_task_handle != NULL)
+            // if (g_redraw_screen_task_handle != NULL)
             {
-                xTaskNotifyGive(g_redraw_screen_task_handle);
+                // xTaskNotifyGive(g_redraw_screen_task_handle);
             }
         }
         else if (bluetooth_code == BLUETOOTH_ERROR)
@@ -201,15 +200,19 @@ void application_setup()
     g_oscillator_screen_mutex = xSemaphoreCreateMutex();
 
     spp_setup(&g_spp_task_handle, SPP_QUEUE_SIZE);
+
+#if 0
     spp_begin("WaveTablePP_2");
     digitalWrite(BLUETOOTH_LIGHT_PIN, HIGH);
     bluetooth_enabled = true;
+#endif
 
     osci.tables_capacity = 256;
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
 
-#if 0
     wave_table_oscilator_read_from_file(&osci);
+
+#if 0
 
     osci.tables[osci.total_cycles++].samples =
         (uint16_t*)calloc(osci.samples_per_cycle, sizeof(uint16_t));
@@ -223,12 +226,12 @@ void application_setup()
         (uint16_t*)calloc(osci.samples_per_cycle, sizeof(uint16_t));
 #endif
 
-    // xTaskCreatePinnedToCore(redraw_screen_task, "Screen Redraw", STACK_SIZE,
-    //                        NULL, 1, &g_redraw_screen_task_handle, 0);
+    xTaskCreatePinnedToCore(redraw_screen_task, "Screen Redraw", STACK_SIZE,
+                            NULL, 1, &g_redraw_screen_task_handle, 0);
     xTaskCreatePinnedToCore(spp_task, "SPP messages", STACK_SIZE, NULL, 1,
                             &g_spp_task_handle, 0);
 
-    print_heap_size();
+    // print_heap_size();
 }
 
 void application_loop()

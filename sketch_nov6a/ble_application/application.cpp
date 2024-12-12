@@ -106,7 +106,7 @@ void redraw_screen_task(void* data)
     while (true)
     {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        if (osci.total_cycles > 0)
+        if (bluetooth_enabled || osci.total_cycles > 0)
         {
             uint16_t cycle_to_draw = g_selected_cycle;
             if (xSemaphoreTake(g_oscillator_screen_mutex, portMAX_DELAY))
@@ -141,12 +141,12 @@ void ble_task(void* data)
         if (ble_copy_transfer(&osci, g_oscillator_mutex,
                               g_oscillator_screen_mutex))
         {
-            wave_table_oscilator_write_to_file(&osci);
+            //wave_table_oscilator_write_to_file(&osci);
 
             display_wave_index = 0;
-            if (g_redraw_screen_task_handle != NULL)
+            //if (g_redraw_screen_task_handle != NULL)
             {
-                xTaskNotifyGive(g_redraw_screen_task_handle);
+             //   xTaskNotifyGive(g_redraw_screen_task_handle);
             }
         }
     }
@@ -183,19 +183,25 @@ void application_setup()
     g_oscillator_mutex = xSemaphoreCreateMutex();
     g_oscillator_screen_mutex = xSemaphoreCreateMutex();
 
-    ble_setup("WaveTablePP_2", &g_ble_task_handle);
+    ble_setup("WaveTablePP_2", &g_ble_task_handle, &osci);
     digitalWrite(BLUETOOTH_LIGHT_PIN, HIGH);
     bluetooth_enabled = true;
+
+    hspi.end();
 
     osci.tables_capacity = 256;
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
 
-    // xTaskCreatePinnedToCore(redraw_screen_task, "Screen Redraw", STACK_SIZE,
-    //                        NULL, 1, &g_redraw_screen_task_handle, 0);
+    wave_table_oscilator_read_from_file(&osci);
+
+    xTaskCreatePinnedToCore(redraw_screen_task, "Screen Redraw", STACK_SIZE,
+                            NULL, 1, &g_redraw_screen_task_handle, 0);
     xTaskCreatePinnedToCore(ble_task, "BLE messages", STACK_SIZE, NULL, 1,
                             &g_ble_task_handle, 0);
 
-    print_heap_size();
+    xTaskNotifyGive(g_redraw_screen_task_handle);
+
+    //print_heap_size();
 }
 
 void application_loop()

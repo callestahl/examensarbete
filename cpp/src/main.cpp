@@ -151,6 +151,9 @@ typedef struct ProfileData
     uint64_t start_time_connect;
     uint64_t end_time_connect;
 
+    uint64_t start_time_find;
+    uint64_t end_time_find;
+
     uint64_t start_time_sending;
     uint64_t end_time_sending;
 
@@ -172,6 +175,8 @@ typedef struct Profile
     uint32_t count;
     ProfileData* data;
 } Profile;
+
+const uint32_t buffer_size = 16384;
 
 void profile_append_to_file(Profile* profile, const char* file_name,
                             const char* file_name_formatted,
@@ -202,6 +207,19 @@ void profile_append_to_file(Profile* profile, const char* file_name,
         fprintf(profile_file, print_format,
                 profile->data[i].end_time_connect -
                     profile->data[i].start_time_connect);
+    }
+
+    fprintf(profile_file, "\nFinding characteristic and service (microseconds): ");
+    for (uint32_t i = 0; i < profile->count; ++i)
+    {
+        char print_format[] = "%llu, ";
+        if (i == (profile->count - 1))
+        {
+            print_format[4] = '\0';
+        }
+        fprintf(profile_file, print_format,
+                profile->data[i].end_time_find -
+                    profile->data[i].start_time_find);
     }
 
     fprintf(profile_file, "\nTotal Sending Time (microseconds): ");
@@ -255,11 +273,113 @@ void profile_append_to_file(Profile* profile, const char* file_name,
         uint64_t sending_time = profile->data[i].end_time_sending -
                                 profile->data[i].start_time_sending;
 
-        fprintf(profile_file, "%u,Classic,%llu,%llu\n", run_offset + (i + 1),
+        fprintf(profile_file, "%u,BLE,%llu,%llu\n", run_offset + (i + 1),
                 profile->total_bytes, sending_time);
     }
     fclose(profile_file);
 }
+
+void profile_append_to_file_buffer(Profile* profile, const char* file_name,
+                            const char* file_name_formatted,
+                            uint32_t run_offset)
+{
+    FILE* profile_file = NULL;
+    fopen_s(&profile_file, file_name, "a");
+    if (!profile_file)
+    {
+        printf("Failed to open profile file for writing.\n");
+        return;
+    }
+
+    fprintf(profile_file, "Profiling Data for connect_and_send_file:\n\n");
+    fprintf(profile_file, "Total Bytes Sent: %llu\n", profile->total_bytes);
+    fprintf(profile_file, "Chunk Size: %u bytes\n", profile->chunk_size);
+    fprintf(profile_file, "Number of Chunks Sent: %u\n", profile->chunks);
+    fprintf(profile_file, "Remaining Bytes: %d\n", profile->remainder);
+
+    fprintf(profile_file, "\nConnection Time (microseconds): ");
+    for (uint32_t i = 0; i < profile->count; ++i)
+    {
+        char print_format[] = "%llu, ";
+        if (i == (profile->count - 1))
+        {
+            print_format[4] = '\0';
+        }
+        fprintf(profile_file, print_format,
+                profile->data[i].end_time_connect -
+                    profile->data[i].start_time_connect);
+    }
+
+    fprintf(profile_file, "\nFinding characteristic and service (microseconds): ");
+    for (uint32_t i = 0; i < profile->count; ++i)
+    {
+        char print_format[] = "%llu, ";
+        if (i == (profile->count - 1))
+        {
+            print_format[4] = '\0';
+        }
+        fprintf(profile_file, print_format,
+                profile->data[i].end_time_find -
+                    profile->data[i].start_time_find);
+    }
+
+    fprintf(profile_file, "\nTotal Sending Time (microseconds): ");
+    for (uint32_t i = 0; i < profile->count; ++i)
+    {
+        char print_format[] = "%llu, ";
+        if (i == (profile->count - 1))
+        {
+            print_format[4] = '\0';
+        }
+        fprintf(profile_file, print_format,
+                profile->data[i].end_time_sending -
+                    profile->data[i].start_time_sending);
+    }
+
+    fprintf(profile_file, "\n\nChunk Timing Details:\n");
+
+    fprintf(profile_file, "Chunk round trip times (microseconds):\n");
+    for (uint32_t i = 0; i < profile->data[0].time_chunk_before_count; i++)
+    {
+        fprintf(profile_file, "Chunk %u: ", i + 1);
+        for (uint32_t j = 0; j < profile->count; ++j)
+        {
+            char print_format[] = "%llu, ";
+            if (j == (profile->count - 1))
+            {
+                print_format[4] = '\n';
+                print_format[5] = '\0';
+            }
+            fprintf(profile_file, print_format,
+                    profile->data[j].time_buffer_chunk_sent[i] -
+                        profile->data[j].time_buffer_chunk_before[i]);
+        }
+    }
+
+    fprintf(profile_file, "\n----------------------------------------\n");
+
+    fclose(profile_file);
+
+    fopen_s(&profile_file, file_name_formatted, "a");
+
+    fseek(profile_file, 0, SEEK_END);
+    if (ftell(profile_file) == 0)
+    {
+        fprintf(profile_file,
+                "Run,Buffer size,Total Sending Time (microseconds)\n");
+    }
+
+    for (uint32_t i = 0; i < profile->count; ++i)
+    {
+        uint64_t sending_time = profile->data[i].end_time_sending -
+                                profile->data[i].start_time_sending;
+
+        fprintf(profile_file, "%u,%u,%llu\n", run_offset + (i + 1),
+                buffer_size, sending_time);
+    }
+    fclose(profile_file);
+}
+
 #define TARGET_DEVICE_NAME L"WaveTablePP_2"
 
 #ifdef USE_SPP
@@ -302,7 +422,7 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer,
 
     bool error = false;
 
-    uint32_t chunk_size = 4096;
+    uint32_t chunk_size = buffer_size;
     uint32_t chunks = (uint32_t)buffer.size / chunk_size;
     uint32_t remainder = buffer.size % chunk_size;
 
@@ -471,16 +591,19 @@ void find_device_address(uint64_t* address)
     watcher.Start();
 }
 
-void connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
+void connect_and_send_file(uint64_t device_address, const ByteArray& buffer,
+                           Profile* profile, ProfileData* profile_data)
 {
-    ProfileData profile_data = { 0 };
-
     printf("Connecting\n");
 
-    profile_data.start_time_connect = get_time_micro();
+    profile_data->start_time_connect = get_time_micro();
 
     auto device =
         BluetoothLEDevice::FromBluetoothAddressAsync(device_address).get();
+
+    profile_data->end_time_connect = get_time_micro();
+
+    profile_data->start_time_find = get_time_micro();
 
     auto service_result = device.GetGattServicesAsync().get();
     auto services = service_result.Services();
@@ -515,7 +638,7 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
         }
     }
 
-    profile_data.end_time_connect = get_time_micro();
+    profile_data->end_time_find = get_time_micro();
 
     // - 3 for GATT header, 512 per Bluetooth specification is max user values
     uint32_t mtu = min(512, target_service.Session().MaxPduSize() - 3);
@@ -526,19 +649,19 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
     uint32_t remainder = buffer.size % chunk_size;
     auto write_buffer = Windows::Storage::Streams::Buffer(chunk_size);
 
-    profile_data.total_bytes = buffer.size;
-    profile_data.chunk_size = mtu;
-    profile_data.chunks = chunks;
-    profile_data.remainder = remainder;
+    profile->total_bytes = buffer.size;
+    profile->chunk_size = mtu;
+    profile->chunks = chunks;
+    profile->remainder = remainder;
 
-    profile_data.start_time_sending = get_time_micro();
+    profile_data->start_time_sending = get_time_micro();
 
     for (uint32_t i = 0; i < chunks; ++i)
     {
         uint32_t offset = chunk_size * i;
 
         profile_data
-            .time_buffer_chunk_before[profile_data.time_chunk_before_count++] =
+            ->time_buffer_chunk_before[profile_data->time_chunk_before_count++] =
             get_time_micro();
 
         write_buffer.Length(chunk_size);
@@ -548,7 +671,7 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
             target_characteristic.WriteValueAsync(write_buffer).get();
 
         profile_data
-            .time_buffer_chunk_sent[profile_data.time_chunk_sent_count++] =
+            ->time_buffer_chunk_sent[profile_data->time_chunk_sent_count++] =
             get_time_micro();
     }
     if (remainder > 0)
@@ -562,14 +685,11 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer)
             target_characteristic.WriteValueAsync(write_buffer).get();
     }
 
-    profile_data.end_time_sending = get_time_micro();
+    profile_data->end_time_sending = get_time_micro();
 
     printf("Done\n");
 
     device.Close();
-
-    profile_data_append_to_file(&profile_data, "profile_data_ble.txt", true,
-                                discovery_time_end - discovery_time_start);
 }
 #endif
 
@@ -614,7 +734,7 @@ int main(void)
     }
 #endif
 
-    uint32_t run = 200;
+    uint32_t run = 100;
 
     ByteArray converted_buffer = {};
     while (!glfwWindowShouldClose(window))
@@ -631,7 +751,7 @@ int main(void)
             if (device_address != 0)
             {
                 uint32_t sleep_millis = 5 * 1000;
-                uint32_t iterations = 50;
+                uint32_t iterations = 20;
                 Profile profile = { 0 };
                 profile.data =
                     (ProfileData*)calloc(iterations, sizeof(ProfileData));
@@ -650,8 +770,8 @@ int main(void)
                 }
                 profile.count = iterations;
                 printf("Test Done!\n");
-                profile_append_to_file(&profile, "profile_data_spp.txt",
-                                       "profile_data_spss.txt", run_offset);
+                profile_append_to_file_buffer(&profile, "profile_data_spp_buffer.txt",
+                                       "profile_data_spss_buffer.txt", run_offset);
 
                 free(profile.data);
             }

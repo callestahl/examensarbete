@@ -235,20 +235,20 @@ BluetoothCode spp_is_complete(WaveTableOscillator* oscillator,
             g_spp.bluetooth_serial.write(BLUETOOTH_FINISHED_CODE);
             if (g_temp_osci->total_cycles > 0)
             {
+#if 0
                 if (xSemaphoreTake(mutex, portMAX_DELAY))
                 {
                     if (xSemaphoreTake(mutex_screen, portMAX_DELAY))
                     {
-#if 0
                         wave_table_oscilator_clean(oscillator);
                         WaveTableOscillator temp = *oscillator;
                         *oscillator = g_temp_osci;
                         g_temp_osci = temp;
-#endif
                         xSemaphoreGive(mutex_screen);
                     }
                     xSemaphoreGive(mutex);
                 }
+#endif
                 return BLUETOOTH_DONE;
             }
         }

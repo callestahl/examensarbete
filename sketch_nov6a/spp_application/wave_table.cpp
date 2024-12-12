@@ -48,31 +48,35 @@ void wave_table_oscilator_clean(WaveTableOscillator* oscillator)
 
 void wave_table_oscilator_write_to_file(const WaveTableOscillator* oscillator)
 {
-    File file = SPIFFS.open("/osci.txt", FILE_WRITE);
-
-    if (file)
+    if (oscillator->total_cycles)
     {
-        uint8_t cycle_sample_count_high =
-            (uint8_t)((oscillator->samples_per_cycle >> 8) & 0xFF);
-        uint8_t cycle_sample_count_low =
-            (uint8_t)(oscillator->samples_per_cycle & 0xFF);
-        file.write(cycle_sample_count_high);
-        file.write(cycle_sample_count_low);
+        File file = SPIFFS.open("/osci.txt", FILE_WRITE);
 
-        for (uint32_t cycle = 0; cycle < oscillator->total_cycles; ++cycle)
+        if (file)
         {
-            for (uint32_t sample_index = 0;
-                 sample_index < oscillator->samples_per_cycle; ++sample_index)
+            uint8_t cycle_sample_count_high =
+                (uint8_t)((oscillator->samples_per_cycle >> 8) & 0xFF);
+            uint8_t cycle_sample_count_low =
+                (uint8_t)(oscillator->samples_per_cycle & 0xFF);
+            file.write(cycle_sample_count_high);
+            file.write(cycle_sample_count_low);
+
+            for (uint32_t cycle = 0; cycle < oscillator->total_cycles; ++cycle)
             {
-                uint16_t sample =
-                    oscillator->tables[cycle].samples[sample_index];
-                uint8_t sample_high = (uint8_t)((sample >> 8) & 0xFF);
-                uint8_t sample_low = (uint8_t)(sample & 0xFF);
-                file.write(sample_high);
-                file.write(sample_low);
+                for (uint32_t sample_index = 0;
+                     sample_index < oscillator->samples_per_cycle;
+                     ++sample_index)
+                {
+                    uint16_t sample =
+                        oscillator->tables[cycle].samples[sample_index];
+                    uint8_t sample_high = (uint8_t)((sample >> 8) & 0xFF);
+                    uint8_t sample_low = (uint8_t)(sample & 0xFF);
+                    file.write(sample_high);
+                    file.write(sample_low);
+                }
             }
+            file.close();
         }
-        file.close();
     }
 }
 
