@@ -1,0 +1,90 @@
+Profiling Data for connect_and_send_file:
+
+Total Bytes Sent: 71676
+Chunk Size: 512 bytes
+Number of Chunks Sent: 139
+Remaining Bytes: 508
+
+Connection Time (microseconds): 1044787, 853659, 1046851, 1009307, 2021468, 900429, 921859, 912946, 2087940, 944473, 2192193, 892228, 3454600, 1049703, 834468, 1033205, 2075446, 842662, 983605, 1054239
+Finding characteristic and service (microseconds): 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+Total Sending Time (microseconds): 2647439, 2495728, 2549250, 2604558, 2536110, 2503567, 2529943, 2612439, 2521001, 2596172, 2620870, 2563564, 2537219, 2578696, 2571915, 2623545, 2650939, 2513546, 2453262, 2604798
+
+Chunk Timing Details:
+Chunk round trip times (microseconds):
+
+----------------------------------------
+Profiling Data for connect_and_send_file:
+
+Total Bytes Sent: 71676
+Chunk Size: 1024 bytes
+Number of Chunks Sent: 69
+Remaining Bytes: 1020
+
+Connection Time (microseconds): 2057244, 1528843, 1641320, 1521751, 1656021, 4061126, 1590886, 1452963, 1528957, 1471486, 1543177, 2884178, 2839842, 1575613, 1537749, 1508608, 1516012, 1516455, 1590518, 1480920
+Finding characteristic and service (microseconds): 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+Total Sending Time (microseconds): 1898578, 1896119, 1917020, 1903653, 1916471, 1922324, 1911175, 1916398, 1913670, 1891918, 1864944, 1872404, 1931185, 1993566, 1924806, 1994462, 1907380, 1981027, 1932361, 1993619
+
+Chunk Timing Details:
+Chunk round trip times (microseconds):
+
+----------------------------------------
+Profiling Data for connect_and_send_file:
+
+Total Bytes Sent: 71676
+Chunk Size: 2048 bytes
+Number of Chunks Sent: 34
+Remaining Bytes: 2044
+
+Connection Time (microseconds): 1292189, 3231944, 1939311, 2028646, 3386758, 2079502, 1953649, 2081537, 3304768, 2078633, 2012842, 2102175, 1891475, 3332833, 1973955, 2083422, 1927373, 2030099, 1919219, 1987658
+Finding characteristic and service (microseconds): 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+Total Sending Time (microseconds): 1517484, 1463316, 1423650, 1406303, 1396435, 1488689, 1403755, 1386169, 1446987, 1418738, 1379865, 1453546, 1487418, 1394455, 1423037, 1456409, 1410932, 1417087, 1531202, 1390704
+
+Chunk Timing Details:
+Chunk round trip times (microseconds):
+
+----------------------------------------
+Profiling Data for connect_and_send_file:
+
+Total Bytes Sent: 71676
+Chunk Size: 4096 bytes
+Number of Chunks Sent: 17
+Remaining Bytes: 2044
+
+Connection Time (microseconds): 1337355, 1169833, 1044965, 1254864, 961538, 1102637, 1191039, 1006489, 3728307, 1137100, 1075545, 1189020, 1109378, 3701896, 1095707, 1213794, 1185645, 1085345, 1171913, 1124904
+Finding characteristic and service (microseconds): 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+Total Sending Time (microseconds): 993538, 1042192, 969853, 1073569, 1084760, 962262, 1058682, 997336, 1064470, 999797, 973038, 997435, 1056138, 959744, 1006224, 1008242, 1009912, 1016229, 1056209, 1037480
+
+Chunk Timing Details:
+Chunk round trip times (microseconds):
+
+----------------------------------------
+Profiling Data for connect_and_send_file:
+
+Total Bytes Sent: 71676
+Chunk Size: 8192 bytes
+Number of Chunks Sent: 8
+Remaining Bytes: 6140
+
+Connection Time (microseconds): 2751293, 1236375, 1294867, 2536044, 1235181, 1265584, 2544194, 1241616, 1275912, 1326330, 1208823, 1325631, 3886742, 1381866, 1238279, 1377638, 1237896, 1194919, 1354034, 1202900
+Finding characteristic and service (microseconds): 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+Total Sending Time (microseconds): 906056, 868535, 882306, 903448, 868149, 888832, 843180, 850071, 836112, 873394, 828607, 837191, 833393, 905978, 820085, 865082, 923506, 820636, 907225, 881245
+
+Chunk Timing Details:
+Chunk round trip times (microseconds):
+
+----------------------------------------
+Profiling Data for connect_and_send_file:
+
+Total Bytes Sent: 71676
+Chunk Size: 16384 bytes
+Number of Chunks Sent: 4
+Remaining Bytes: 6140
+
+Connection Time (microseconds): 2018427, 1440133, 1333382, 1565389, 1336611, 1432104, 1398525, 1459365, 1332790, 1410764, 1469652, 1417889, 1383625, 1508640, 1382112, 1473951, 1377287, 1461603, 1477220, 1466438
+Finding characteristic and service (microseconds): 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+Total Sending Time (microseconds): 709753, 764554, 702342, 742083, 731143, 697316, 719450, 752401, 694569, 717462, 705986, 733649, 683621, 752488, 723641, 698508, 739703, 688704, 716107, 684928
+
+Chunk Timing Details:
+Chunk round trip times (microseconds):
+
+----------------------------------------

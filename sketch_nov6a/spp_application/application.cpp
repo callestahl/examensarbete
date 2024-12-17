@@ -44,7 +44,7 @@
 #define SSD1351_BLUE RGB565(0, 0, 31)
 
 #define STACK_SIZE 4096
-#define SPP_QUEUE_SIZE 16384
+#define SPP_QUEUE_SIZE 4096
 
 #define BLUETOOTH_BUTTON_PIN 4
 #define BLUETOOTH_LIGHT_PIN 22
@@ -143,14 +143,13 @@ void spp_task(void* data)
 
         if (bluetooth_code == BLUETOOTH_DONE)
         {
-            // wave_table_oscilator_write_to_file(&osci);
-
-            // turn_off_bluetooth();
+            wave_table_oscilator_write_to_file(&osci);
+            turn_off_bluetooth();
 
             display_wave_index = 0;
-            // if (g_redraw_screen_task_handle != NULL)
+            if (g_redraw_screen_task_handle != NULL)
             {
-                // xTaskNotifyGive(g_redraw_screen_task_handle);
+                xTaskNotifyGive(g_redraw_screen_task_handle);
             }
         }
         else if (bluetooth_code == BLUETOOTH_ERROR)
@@ -209,8 +208,14 @@ void application_setup()
 
     osci.tables_capacity = 256;
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
-
+#if 1
+    osci.samples_per_cycle = 128;
+    osci.tables[0].samples = (uint16_t*)calloc(osci.samples_per_cycle, sizeof(WaveTable));
+    generate_sine_wave(osci.tables, osci.samples_per_cycle);
+    osci.total_cycles = 1;
+#else
     wave_table_oscilator_read_from_file(&osci);
+#endif
 
 #if 0
 
