@@ -208,7 +208,7 @@ void application_setup()
 
     osci.tables_capacity = 256;
     osci.tables = (WaveTable*)calloc(osci.tables_capacity, sizeof(WaveTable));
-#if 1
+#if 0
     osci.samples_per_cycle = 128;
     osci.tables[0].samples = (uint16_t*)calloc(osci.samples_per_cycle, sizeof(WaveTable));
     generate_sine_wave(osci.tables, osci.samples_per_cycle);
@@ -620,6 +620,6 @@ void wavetable_oscillation()
 uint16_t analog_input_to_pitch(uint16_t analog_value)
 {
     float voltage = (float)analog_value / MAX_12BIT_VALUE * PITCH_INPUT_RANGE;
-    float frequency = C0_FREQUENCY * pow(2, voltage);
+    float frequency = C0_FREQUENCY * pow(2, voltage + 4);
     return frequency;
 }
