@@ -6,7 +6,7 @@
 	(paper "A4")
 	(title_block
 		(title "Output")
-		(date "2024-11-18")
+		(date "2025-01-03")
 		(rev "1")
 	)
 	(lib_symbols
@@ -1156,6 +1156,18 @@
 		(uuid "1afaad4d-cefc-4117-8345-dafd2fc006de")
 	)
 	(junction
+		(at 193.04 109.22)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "4d8d9ce3-7a9c-42af-b10c-32215e86dc5b")
+	)
+	(junction
+		(at 172.72 109.22)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "5e877e3a-395b-4d2a-b8b9-a911ee66f7b2")
+	)
+	(junction
 		(at 87.63 95.25)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -1205,6 +1217,16 @@
 	)
 	(wire
 		(pts
+			(xy 193.04 115.57) (xy 193.04 109.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "02692609-17ad-4b24-8abb-851975127fb5")
+	)
+	(wire
+		(pts
 			(xy 189.23 95.25) (xy 193.04 95.25)
 		)
 		(stroke
@@ -1242,6 +1264,16 @@
 			(type default)
 		)
 		(uuid "2b5efa68-b959-4ce2-bad4-8db7ea5aa78c")
+	)
+	(wire
+		(pts
+			(xy 179.07 115.57) (xy 172.72 115.57)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2d2280c4-b1fa-4f4f-b831-f48f8fb0553b")
 	)
 	(wire
 		(pts
@@ -1485,6 +1517,16 @@
 	)
 	(wire
 		(pts
+			(xy 186.69 115.57) (xy 193.04 115.57)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "97e108fa-bfe7-42dc-a311-65c246960598")
+	)
+	(wire
+		(pts
 			(xy 101.6 95.25) (xy 101.6 99.06)
 		)
 		(stroke
@@ -1502,6 +1544,16 @@
 			(type default)
 		)
 		(uuid "b327e5da-c049-494f-ab16-c8b221fefdba")
+	)
+	(wire
+		(pts
+			(xy 172.72 115.57) (xy 172.72 109.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b34f8f2b-a4da-4332-bc72-78f945f5600c")
 	)
 	(wire
 		(pts
@@ -2767,6 +2819,73 @@
 			(project "Bluetooth_Wavetable_Oscillator"
 				(path "/fda99055-d953-4203-b673-64a5e6540552/e721cc72-9f0b-4653-9ded-ede3b48f082c"
 					(reference "#PWR031")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 182.88 115.57 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "afb4402c-a30b-4685-8e1a-d49b05696cbb")
+		(property "Reference" "C17"
+			(at 182.88 120.142 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "150p"
+			(at 182.88 122.682 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 179.07 116.5352 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 182.88 115.57 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor"
+			(at 182.88 115.57 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "545e7c24-5a14-48e8-a5a2-e83ceb587216")
+		)
+		(pin "1"
+			(uuid "5e795049-5500-49e9-81eb-7c9db8390f60")
+		)
+		(instances
+			(project ""
+				(path "/fda99055-d953-4203-b673-64a5e6540552/e721cc72-9f0b-4653-9ded-ede3b48f082c"
+					(reference "C17")
 					(unit 1)
 				)
 			)
