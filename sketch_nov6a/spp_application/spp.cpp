@@ -55,7 +55,7 @@ internal int spp_data_in_queue(void)
     return uxQueueMessagesWaiting(g_spp.queue);
 }
 
-internal void spp_clear_buffer()
+internal void spp_clear_queue()
 {
     while (spp_data_in_queue())
     {
@@ -71,7 +71,7 @@ internal bool spp_has_timed_out(uint64_t start_time, uint64_t time_to_timeout)
         g_spp.bytes_received = 0;
         g_spp.bytes_to_received = 0;
         bluetooth_reset(&g_spp.bluetooth);
-        spp_clear_buffer();
+        spp_clear_queue();
         g_spp.bluetooth_serial.write(BLUETOOTH_ERROR_CODE);
         return true;
     }
@@ -93,7 +93,7 @@ internal void spp_revert_transaction()
     g_spp.bytes_received = 0;
     g_spp.bytes_to_received = 0;
     bluetooth_reset(&g_spp.bluetooth);
-    spp_clear_buffer();
+    spp_clear_queue();
     g_spp.bluetooth_serial.write(BLUETOOTH_ERROR_CODE);
 }
 
@@ -108,7 +108,7 @@ internal bool spp_read_header()
     if (id0 == 29960 && id1 == 62903 && id2 == 35185 && id3 == 26662)
     {
         uint16_t cycle_sample_count = spp_get_uint16();
-        if(g_temp_osci->total_cycles)
+        if (g_temp_osci->total_cycles)
         {
             wave_table_oscilator_clean(g_temp_osci);
         }
@@ -214,9 +214,7 @@ void spp_end(void)
     g_spp.bluetooth_serial.disableSSP();
 }
 
-BluetoothCode spp_is_complete(WaveTableOscillator* oscillator,
-                              SemaphoreHandle_t mutex,
-                              SemaphoreHandle_t mutex_screen)
+BluetoothCode spp_is_complete()
 {
 
     if (g_spp.bluetooth.reading_samples)
@@ -256,9 +254,8 @@ BluetoothCode spp_is_complete(WaveTableOscillator* oscillator,
     return BLUETOOTH_OK;
 }
 
-BluetoothCode spp_look_for_incoming_messages(WaveTableOscillator* oscillator,
-                                             SemaphoreHandle_t mutex,
-                                             SemaphoreHandle_t mutex_screen)
+BluetoothCode spp_look_for_incoming_messages(WaveTableOscillator* oscillator)
+
 {
     const uint64_t start_time = millis();
     const uint64_t time_to_timeout = 500;
@@ -267,7 +264,7 @@ BluetoothCode spp_look_for_incoming_messages(WaveTableOscillator* oscillator,
 
     while (spp_data_in_queue())
     {
-        if(spp_has_timed_out(start_time, time_to_timeout))
+        if (spp_has_timed_out(start_time, time_to_timeout))
         {
             return BLUETOOTH_ERROR;
         }
@@ -295,5 +292,5 @@ BluetoothCode spp_look_for_incoming_messages(WaveTableOscillator* oscillator,
         }
         g_spp.last_read_value_time = millis();
     }
-    return spp_is_complete(oscillator, mutex, mutex_screen);
+    return spp_is_complete();
 }

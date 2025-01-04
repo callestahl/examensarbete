@@ -55,11 +55,10 @@ struct ButtonState
     uint64_t last_debounce_time;
 };
 
-void wave_table_draw(const WaveTable* table, uint32_t table_length,
+void draw_wave_table(const WaveTable* table, uint32_t table_length,
                      uint16_t color);
-void clear_screen(int16_t x, int16_t y);
-void generate_sine_wave(WaveTable* table, uint32_t table_length);
 void redraw_screen(uint16_t cycle_index, uint16_t last_cycle_index);
+void generate_sine_wave(WaveTable* table, uint32_t table_length);
 bool button_is_clicked(ButtonState* button, int32_t pin);
 void process_buttons();
 void wavetable_oscillation();
@@ -94,12 +93,14 @@ uint64_t button_repeat_reset = 0;
 
 uint64_t sample_period_us = 1000000 / SAMPLE_RATE;
 uint64_t next_sample_time;
+
 static SemaphoreHandle_t g_oscillator_mutex = NULL;
 static SemaphoreHandle_t g_oscillator_screen_mutex = NULL;
 
 volatile uint16_t g_selected_cycle = 0;
 volatile uint16_t g_last_selected_cycle = MAX_16BIT_VALUE;
 static TaskHandle_t g_redraw_screen_task_handle = NULL;
+static TaskHandle_t g_spp_task_handle = NULL;
 
 void redraw_screen_task(void* data)
 {
@@ -130,16 +131,13 @@ void print_heap_size(void)
     display.println(osci.samples_per_cycle);
 }
 
-static TaskHandle_t g_spp_task_handle = NULL;
-
 void spp_task(void* data)
 {
     while (true)
     {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-        BluetoothCode bluetooth_code = spp_look_for_incoming_messages(
-            &osci, g_oscillator_mutex, g_oscillator_screen_mutex);
+        BluetoothCode bluetooth_code = spp_look_for_incoming_messages(&osci);
 
         if (bluetooth_code == BLUETOOTH_DONE)
         {
@@ -171,9 +169,6 @@ void application_setup()
 {
     Serial.begin(115200);
     SPIFFS.begin(true);
-
-    // pinMode(button_pin0, INPUT);
-    // pinMode(button_pin1, INPUT);
 
     pinMode(BLUETOOTH_BUTTON_PIN, INPUT_PULLUP);
     pinMode(BLUETOOTH_LIGHT_PIN, OUTPUT);
@@ -307,10 +302,10 @@ void redraw_screen(uint16_t cycle_index, uint16_t last_cycle_index)
         display.setTextColor(SSD1351_WHITE, SSD1351_BLACK);
         if (last_cycle_index < osci.total_cycles)
         {
-            wave_table_draw(&osci.tables[last_cycle_index],
+            draw_wave_table(&osci.tables[last_cycle_index],
                             osci.samples_per_cycle, SSD1351_BLACK);
         }
-        wave_table_draw(&osci.tables[cycle_index], osci.samples_per_cycle,
+        draw_wave_table(&osci.tables[cycle_index], osci.samples_per_cycle,
                         SSD1351_RED);
         display.setCursor(0, 40 + (SCREEN_HEIGHT / 2));
         display.printf("Position: %03u\n", cycle_index);
@@ -328,7 +323,7 @@ uint32_t y_position_75_procent(uint16_t data)
            ((data * window_height_75_procent) / MAX_16BIT_VALUE);
 }
 
-void wave_table_draw(const WaveTable* table, uint32_t table_length,
+void draw_wave_table(const WaveTable* table, uint32_t table_length,
                      uint16_t color)
 {
     const uint32_t samples_per_draw = 2;
