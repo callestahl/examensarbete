@@ -15,16 +15,11 @@ global BLECharacteristic* g_characteristic = NULL;
 
 global bool g_device_connected = false;
 global Bluetooth g_bluetooth = { 0 };
-global bool g_header_read = false;
-global uint32_t g_table_index = 0;
-global uint32_t g_sample_index = 0;
 global WaveTableOscillator* g_temp_osci = NULL;
 
 global uint64_t g_read_bytes = 0;
 global uint64_t g_bytes_to_read = 0;
 global TaskHandle_t* g_task_notification_handle;
-
-global Adafruit_SSD1351* g_display = NULL;
 
 class MyServerCallbacks : public BLEServerCallbacks
 {
@@ -137,7 +132,7 @@ bool ble_copy_transfer(WaveTableOscillator* oscillator, SemaphoreHandle_t mutex,
     if ((!g_bluetooth.reading_samples || !g_device_connected) &&
         g_temp_osci->total_cycles != 0 && (g_read_bytes == g_bytes_to_read))
     {
-#if 0
+#if 0 // NOTE: This is not needed in this implementation
         if (xSemaphoreTake(mutex, portMAX_DELAY))
         {
             if (xSemaphoreTake(mutex_screen, portMAX_DELAY))
