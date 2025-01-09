@@ -73,7 +73,7 @@ SPISettings g_vspi_settings = SPISettings(16000000, MSBFIRST, SPI_MODE0);
 SPIClass g_hspi(HSPI);
 SPISettings g_hspi_settings = SPISettings(16000000, MSBFIRST, SPI_MODE0);
 
-Adafruit_SSD1351 g_display(SCREEN_WIDTH, SCREEN_HEIGHT, &vspi, VSPI_CS, OLED_DC,
+Adafruit_SSD1351 g_display(SCREEN_WIDTH, SCREEN_HEIGHT, &g_vspi, VSPI_CS, OLED_DC,
                          OLED_RESET);
 
 WaveTableOscillator g_osci;
@@ -114,11 +114,11 @@ void print_heap_size(void)
 {
     size_t heap_size = esp_get_free_heap_size();
 
-    display.fillScreen(SSD1351_BLACK);
-    display.setCursor(0, 0);
-    display.println(heap_size);
-    display.println(osci.total_cycles);
-    display.println(osci.samples_per_cycle);
+    g_display.fillScreen(SSD1351_BLACK);
+    g_display.setCursor(0, 0);
+    g_display.println(heap_size);
+    g_display.println(g_osci.total_cycles);
+    g_display.println(g_osci.samples_per_cycle);
 }
 
 void spp_task(void* data)
@@ -148,7 +148,7 @@ void spp_task(void* data)
 
 void turn_off_bluetooth(void)
 {
-    hspi.begin();
+    g_hspi.begin();
     spp_end();
     g_bluetooth_enabled = false;
     digitalWrite(BLUETOOTH_LIGHT_PIN, LOW);
@@ -167,14 +167,14 @@ void application_setup()
     pinMode(PIN_WAVETABLE_POSITION, INPUT);
 
 #if 1
-    display.begin();
-    display.fillScreen(SSD1351_BLACK);
-    display.setTextColor(SSD1351_WHITE, SSD1351_BLACK);
-    display.setTextSize(1);
-    display.println("Hello1");
+    g_display.begin();
+    g_display.fillScreen(SSD1351_BLACK);
+    g_display.setTextColor(SSD1351_WHITE, SSD1351_BLACK);
+    g_display.setTextSize(1);
+    g_display.println("Hello1");
 #endif
 
-    hspi.begin();
+    g_hspi.begin();
     pinMode(HSPI_CS, OUTPUT);
     digitalWrite(HSPI_CS, HIGH);
 
@@ -194,10 +194,10 @@ void application_setup()
     g_osci.tables_capacity = 256;
     g_osci.tables = (WaveTable*)calloc(g_osci.tables_capacity, sizeof(WaveTable));
 #if 0
-    osci.samples_per_cycle = 128;
-    osci.tables[0].samples = (uint16_t*)calloc(osci.samples_per_cycle, sizeof(WaveTable));
-    generate_sine_wave(osci.tables, osci.samples_per_cycle);
-    osci.total_cycles = 1;
+    g_osci.samples_per_cycle = 128;
+    g_osci.tables[0].samples = (uint16_t*)calloc(g_osci.samples_per_cycle, sizeof(WaveTable));
+    generate_sine_wave(g_osci.tables, g_osci.samples_per_cycle);
+    g_osci.total_cycles = 1;
 #else
     wave_table_oscilator_read_from_file(&g_osci);
 #endif
@@ -215,7 +215,7 @@ void application_loop()
     {
         if (!g_bluetooth_enabled)
         {
-            hspi.end();
+            g_hspi.end();
             wave_table_oscilator_write_to_file(&g_osci);
             spp_begin("WaveTablePP_2");
             digitalWrite(BLUETOOTH_LIGHT_PIN, HIGH);
@@ -253,27 +253,27 @@ void redraw_screen(uint16_t cycle_index, uint16_t last_cycle_index)
         const uint16_t half_screen_width = SCREEN_WIDTH / 2;
         const uint16_t half_screen_height = SCREEN_WIDTH / 2;
 
-        display.fillScreen(SSD1351_BLACK);
-        display.setCursor(10, 10);
-        display.setTextSize(2);
-        display.setTextColor(SSD1351_BLUE, SSD1351_BLACK);
-        display.println("BLUETOOTH");
-        display.setCursor(30, half_screen_height);
-        display.setTextColor(SSD1351_WHITE, SSD1351_BLACK);
-        display.println("UPLOAD");
-        display.setCursor(42, half_screen_height + 30);
-        display.println("FILE");
+        g_display.fillScreen(SSD1351_BLACK);
+        g_display.setCursor(10, 10);
+        g_display.setTextSize(2);
+        g_display.setTextColor(SSD1351_BLUE, SSD1351_BLACK);
+        g_display.println("BLUETOOTH");
+        g_display.setCursor(30, half_screen_height);
+        g_display.setTextColor(SSD1351_WHITE, SSD1351_BLACK);
+        g_display.println("UPLOAD");
+        g_display.setCursor(42, half_screen_height + 30);
+        g_display.println("FILE");
         bluetooth_last_on = true;
     }
     else
     {
         if (bluetooth_last_on)
         {
-            display.fillScreen(SSD1351_BLACK);
-            display.setTextSize(1);
+            g_display.fillScreen(SSD1351_BLACK);
+            g_display.setTextSize(1);
             bluetooth_last_on = false;
         }
-        display.setTextColor(SSD1351_WHITE, SSD1351_BLACK);
+        g_display.setTextColor(SSD1351_WHITE, SSD1351_BLACK);
         if (last_cycle_index < g_osci.total_cycles)
         {
             draw_wave_table(&g_osci.tables[last_cycle_index],
@@ -281,9 +281,9 @@ void redraw_screen(uint16_t cycle_index, uint16_t last_cycle_index)
         }
         draw_wave_table(&g_osci.tables[cycle_index], g_osci.samples_per_cycle,
                         SSD1351_RED);
-        display.setCursor(0, 40 + (SCREEN_HEIGHT / 2));
-        display.printf("Position: %03u\n", cycle_index);
-        display.printf("Analog: %04u\n", g_analog_value);
+        g_display.setCursor(0, 40 + (SCREEN_HEIGHT / 2));
+        g_display.printf("Position: %03u\n", cycle_index);
+        g_display.printf("Analog: %04u\n", g_analog_value);
     }
 }
 #endif
@@ -313,7 +313,7 @@ void draw_wave_table(const WaveTable* table, uint32_t table_length,
     {
         uint32_t x1 = x0 + x_step;
         uint32_t y1 = y_position_75_procent(table->samples[i]);
-        display.drawLine(x0 >> 16, y0, x1 >> 16, y1, color);
+        g_display.drawLine(x0 >> 16, y0, x1 >> 16, y1, color);
 
         x0 = x1;
         y0 = y1;
@@ -380,7 +380,7 @@ bool button_is_clicked(ButtonState* button, int32_t pin)
     return false;
 }
 
-uint16_t g_last_selected_cycle = MAX_16BIT_VALUE;
+uint16_t g_last_selected_cycle_osci = MAX_16BIT_VALUE;
 
 uint64_t g_timer = millis();
 
@@ -450,10 +450,10 @@ void dac_write(uint16_t value)
     value |= 0x2000;
     digitalWrite(HSPI_CS, LOW);
 
-    hspi.beginTransaction(hspi_settings);
-    hspi.transfer((uint8_t)(value >> 8));
-    hspi.transfer((uint8_t)(value & 0xFF));
-    hspi.endTransaction();
+    g_hspi.beginTransaction(g_hspi_settings);
+    g_hspi.transfer((uint8_t)(value >> 8));
+    g_hspi.transfer((uint8_t)(value & 0xFF));
+    g_hspi.endTransaction();
 
     digitalWrite(HSPI_CS, HIGH);
 }
@@ -495,7 +495,7 @@ void wavetable_oscillation()
         get_cycle_from_analog(selected_cycle_analog_value, g_osci.total_cycles);
 #else
     uint16_t selected_cycle =
-        (selected_cycle_analog_value * osci.total_cycles) / MAX_12BIT_VALUE;
+        (selected_cycle_analog_value * g_osci.total_cycles) / MAX_12BIT_VALUE;
 #endif
 
     frequency = min(frequency, SAMPLE_RATE / 2);
@@ -527,9 +527,9 @@ void wavetable_oscillation()
 #if 0
         if (millis() >= timer)
         {
-            display.fillScreen(SSD1351_BLACK);
-            display.setCursor(10, 10);
-            display.printf("%u\n", value >> 4);
+            g_display.fillScreen(SSD1351_BLACK);
+            g_display.setCursor(10, 10);
+            g_display.printf("%u\n", value >> 4);
             timer = millis() + 500;
         }
 #endif
@@ -538,10 +538,10 @@ void wavetable_oscillation()
 
         g_selected_cycle = selected_cycle;
 
-        if (selected_cycle != g_last_selected_cycle)
+        if (selected_cycle != g_last_selected_cycle_osci)
         {
             should_redraw = true;
-            g_last_selected_cycle = selected_cycle;
+            g_last_selected_cycle_osci = selected_cycle;
         }
 #if 1
         if (should_redraw)
