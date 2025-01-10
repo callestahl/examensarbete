@@ -520,7 +520,7 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer,
     closesocket(bluetooth_socket);
 }
 
-void find_device_address(uint64_t* address)
+unsigned long find_device_address(void* address)
 {
     BLUETOOTH_FIND_RADIO_PARAMS radio_params = {};
     radio_params.dwSize = sizeof(BLUETOOTH_FIND_RADIO_PARAMS);
@@ -532,7 +532,7 @@ void find_device_address(uint64_t* address)
     if (!radio_find)
     {
         printf("Failed to find radio\n");
-        return;
+        return 1;
     }
 
     BLUETOOTH_DEVICE_SEARCH_PARAMS search_params = {};
@@ -555,7 +555,7 @@ void find_device_address(uint64_t* address)
     {
         printf("No Bluetooth devices found.\n");
         BluetoothFindRadioClose(radio_find);
-        return;
+        return 1;
     }
 
     bool device_found = false;
@@ -575,11 +575,13 @@ void find_device_address(uint64_t* address)
     BluetoothFindDeviceClose(device_find);
     BluetoothFindRadioClose(radio_find);
 
-    *address = 0;
+    (*(uint64_t*)address) = 0;
     if (device_found)
     {
-        *address = device_info.Address.ullLong;
+        (*(uint64_t*)address) = device_info.Address.ullLong;
     }
+
+    return 0;
 }
 
 #else
@@ -734,11 +736,13 @@ void connect_and_send_file(uint64_t device_address, const ByteArray& buffer,
 
 int main(void)
 {
+    uint64_t device_address = 0;
 #ifndef USE_SPP
     init_apartment();
-#endif
-    uint64_t device_address = 0;
     find_device_address(&device_address);
+#else
+    HANDLE thread_handle = CreateThread(0, 0, find_device_address, &device_address, 0, NULL);
+#endif
 
     if (!glfwInit())
     {
@@ -827,6 +831,8 @@ int main(void)
 
 #ifdef USE_SPP
     WSACleanup();
+    WaitForSingleObject(thread_handle, INFINITE);
+    CloseHandle(thread_handle);
 #endif
 
     glfwTerminate();

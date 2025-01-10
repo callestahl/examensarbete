@@ -14,18 +14,18 @@ set(CMAKE_CXX_FLAGS_RELEASE "${STANDARD_FLAGS} -O2 -Oi -Z7 -DNDEBUG")
 set(CMAKE_C_FLAGS_DEBUG "${STANDARD_FLAGS} -Od -Oi -Z7 -DDEBUG")
 set(CMAKE_C_FLAGS_RELEASE "${STANDARD_FLAGS} -O2 -Oi -Z7 -DNDEBUG")
 
-file(GLOB SOURCES "${CMAKE_SOURCE_DIR}/cpp/src/*.cpp")
-file(GLOB IMGUI "${CMAKE_SOURCE_DIR}/cpp/vendor/imgui/*.cpp")
+file(GLOB SOURCES "${CMAKE_SOURCE_DIR}/desktop/src/*.cpp")
+file(GLOB IMGUI "${CMAKE_SOURCE_DIR}/desktop/vendor/imgui/*.cpp")
 
-add_subdirectory("${CMAKE_SOURCE_DIR}/cpp/vendor/glfw")
+add_subdirectory("${CMAKE_SOURCE_DIR}/desktop/vendor/glfw")
 
-add_executable(${EXE} ${SOURCES} ${IMGUI} "${CMAKE_SOURCE_DIR}/cpp/vendor/glad/src/glad.c" "${CMAKE_SOURCE_DIR}/cpp/vendor/dr_wav/dr_wav.cpp")
+add_executable(${EXE} ${SOURCES} ${IMGUI} "${CMAKE_SOURCE_DIR}/desktop/vendor/glad/src/glad.c" "${CMAKE_SOURCE_DIR}/desktop/vendor/dr_wav/dr_wav.cpp")
 
 target_include_directories(${EXE}
-    PUBLIC "${CMAKE_SOURCE_DIR}/cpp"
-    PUBLIC "${CMAKE_SOURCE_DIR}/cpp/vendor"
-    PUBLIC "${CMAKE_SOURCE_DIR}/cpp/vendor/glad/include"
-    PUBLIC "${CMAKE_SOURCE_DIR}/cpp/vendor/glfw/include"
+    PUBLIC "${CMAKE_SOURCE_DIR}/desktop"
+    PUBLIC "${CMAKE_SOURCE_DIR}/desktop/vendor"
+    PUBLIC "${CMAKE_SOURCE_DIR}/desktop/vendor/glad/include"
+    PUBLIC "${CMAKE_SOURCE_DIR}/desktop/vendor/glfw/include"
 )
 
 target_link_libraries(${EXE} glfw)

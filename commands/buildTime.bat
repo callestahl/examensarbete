@@ -1,2 +1,2 @@
-REM cmake --build build
-.\commands\buildEsp.bat
+cmake --build build
+REM .\commands\buildEsp.bat
