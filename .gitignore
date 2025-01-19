@@ -2,6 +2,7 @@ build
 .project
 .settings
 .classpath
+.cache
 target
 tags
 
